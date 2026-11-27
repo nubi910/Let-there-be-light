@@ -42,7 +42,6 @@
 |---|---|
 | `index.html` | 빌드 결과물. 이 파일 하나만 열면 동작해요 |
 | `src/index.src.html` | 실제로 고치는 소스 |
-| `photo.html` / `src/photo.src.html` | 사진 리라이팅 페이지 |
 | `src/i18n.js` | 다국어 사전 (키는 한국어 원문). 언어 추가는 여기에 |
 | `assets/` | 얼굴 모델(`head.glb`)과 노멀맵 |
 | `build.py` | 소스에 모델 데이터와 다국어 사전을 넣어 `index.html` 생성 |
