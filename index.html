@@ -61,6 +61,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .chips button[aria-pressed=true]{background:#2457e6;border-color:#2457e6;color:#fff}
 .qcam input[type=range]{width:100%;height:28px;accent-color:#8aabff;margin:4px 0 0}
 .q-c{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px}
+.sel{font:inherit;font-size:14px;min-height:40px;padding:0 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
 .seg{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 8px}
 .seg button{border:1px solid var(--line);background:var(--chip);border-radius:8px;min-height:36px;padding:0 10px;font-size:13px}
 .seg button[aria-pressed=true]{border-color:var(--acc);color:var(--acc);font-weight:600}
@@ -150,12 +151,13 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
     <div class="ctx" id="ctx" hidden>
       <div class="ctx-h"><b id="ctxName">키 조명</b><button id="ctxClose" aria-label="닫기">✕</button></div>
       <div class="ctx-m">
-        <button data-m="move" style="--mc:#ff3d7f" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg>이동<i></i></button>
-        <button data-m="rot" style="--mc:#2f7bff" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>회전<i></i></button>
-        <button data-m="adj" style="--mc:#ffd21f" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>조절<i></i></button>
+        <button data-m="move" style="--mc:#ff3d7f" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg><span class="ml">이동</span><i></i></button>
+        <button data-m="rot" style="--mc:#2f7bff" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg><span class="ml">회전</span><i></i></button>
+        <button data-m="adj" style="--mc:#ffd21f" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span class="ml">조절</span><i></i></button>
       </div>
       <p class="ctx-tip" id="ctxTip"></p>
       <button class="ctx-sub" id="aimReset" hidden>피사체 쪽으로 다시 겨누기</button>
+      <div id="ctxPose" hidden><div class="q-l"><span>종류</span></div><div class="chips" id="cMqType"></div><div class="q-l"><span>자세</span></div><div class="chips" id="cPose"></div></div>
       <div id="ctxWall" hidden><div class="line"><span>배경지 색</span><input type="color" id="w-col"></div></div>
       <div id="ctxAdj" hidden>
         <label class="row"><span>세기</span><output id="oa-pow"></output><input type="range" id="a-pow" min="0" max="100" step="1"></label>
@@ -190,6 +192,13 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
     </div>
     <div id="lightCtrls"></div>
     <p class="note">방향 0°는 카메라 쪽, ±90°는 옆, 180°는 피사체 뒤예요.</p>
+
+    <h2>마네킹</h2>
+    <div class="seg" id="mqType"></div>
+    <div class="line" style="margin:4px 0 0;min-height:0"><span>자세</span></div><div class="seg" id="poseSeg"></div>
+    <div class="line"><span>관절</span><select id="jointSel" class="sel"></select></div>
+    <div id="jointCtrls"></div>
+    <p class="note" id="poseNote">왼쪽·오른쪽은 인형 기준이에요. 흉상은 자세를 바꿀 수 없어요. 얼굴 방향·고개·몸 방향은 아래 "전체"에 있어요.</p>
 
     <h2>카메라</h2>
     <div class="line" style="margin:4px 0 0;min-height:0"><span>화면비</span></div><div class="seg" id="arSeg"></div>
@@ -275,11 +284,23 @@ const PRESETS=[
   {n:'클램쉘',key:{az:0,el:40,d:1.3,pow:65,size:70},fill:{az:0,el:-30,d:1.1,pow:30,size:70},rim:{az:180,el:35,d:1.8,pow:50,size:15}},
   {n:'컬러 젤',key:{az:25,el:30,d:1.6,pow:50,size:50},fill:{az:-120,el:15,d:1.5,pow:65,size:15,col:'#3fa9ff'},rim:{az:120,el:15,d:1.5,pow:65,size:15,col:'#ff4fa0'}}
 ];
-const GBASE={amb:12,exp:0,turn:0,tilt:0,bg:'#8c8a86',wallD:1.4,wallA:0,
+/* 데생 인형 자세 프리셋: 관절별 [x,y,z]도. x=앞뒤 굽힘, y=비틀기, z=옆으로. 왼쪽/오른쪽은 인형 기준 */
+const POSES=[
+  {n:'기본',p:{shoulderL:[0,0,8],shoulderR:[0,0,-8],elbowL:[-8,0,0],elbowR:[-8,0,0]}},
+  {n:'콘트라포스토',p:{pelvis:[0,0,5],chest:[0,0,-5],neck:[0,0,3],shoulderL:[0,0,8],shoulderR:[5,0,-6],elbowL:[-10,0,0],elbowR:[-15,0,0],hipL:[0,0,-3],hipR:[-6,0,4],kneeR:[14,0,0],ankleR:[-8,0,0]}},
+  {n:'허리에 손',p:{shoulderL:[10,0,45],shoulderR:[10,0,-45],elbowL:[0,0,-105],elbowR:[0,0,105],wristL:[0,0,20],wristR:[0,0,-20]}},
+  {n:'손 모으기',p:{shoulderL:[-20,0,-8],shoulderR:[-20,0,8],elbowL:[-70,0,-25],elbowR:[-70,0,25]}},
+  {n:'한 팔 들기',p:{shoulderL:[0,0,8],shoulderR:[0,0,-160],elbowL:[-8,0,0],elbowR:[0,0,-15]}},
+  {n:'걷기',p:{hipL:[-22,0,0],kneeL:[8,0,0],hipR:[18,0,0],kneeR:[30,0,0],ankleR:[-10,0,0],shoulderL:[18,0,8],shoulderR:[-18,0,-8],elbowL:[-10,0,0],elbowR:[-25,0,0]}}
+];
+const MQTYPES={bust:'흉상',torso:'토르소',upper:'상반신 전체',thigh:'허벅지까지',knee:'무릎 아래까지',full:'전신'};
+const JOINTS=[['pelvis','골반'],['spine','허리'],['chest','가슴'],['neck','목'],['shoulderL','왼쪽 어깨'],['elbowL','왼쪽 팔꿈치'],['wristL','왼쪽 손목'],['shoulderR','오른쪽 어깨'],['elbowR','오른쪽 팔꿈치'],['wristR','오른쪽 손목'],['hipL','왼쪽 고관절'],['kneeL','왼쪽 무릎'],['ankleL','왼쪽 발목'],['hipR','오른쪽 고관절'],['kneeR','오른쪽 무릎'],['ankleR','오른쪽 발목']];
+const GBASE={mq:'bust',bodyTurn:0,pose:JSON.parse(JSON.stringify(POSES[0].p)),amb:12,exp:0,turn:0,tilt:0,bg:'#8c8a86',wallD:1.4,wallA:0,
   cm:{on:true,az:0,dist:1.7,h:1.56,pan:0,tilt:0,f:85,Ni:4,fd:1.6,af:true,ar:'2:3',grid:'thirds',dc:false}};
 const STOPS=[1.2,1.4,1.8,2,2.8,4,5.6,8,11,16];
 const AR={'2:3':[2,3],'3:2':[3,2],'4:5':[4,5],'1:1':[1,1],'16:9':[16,9]};
 const GRIDS={off:'끔',thirds:'3분할',phi:'황금비',cross:'십자'};
+const JCTRL=[['x','앞뒤 굽힘'],['y','비틀기'],['z','옆으로']];
 const CAMCTRL=[
   ['f','렌즈',24,200,1,v=>`${v}mm`],
   ['Ni','조리개',0,STOPS.length-1,1,i=>`f/${STOPS[i]}`],
@@ -318,6 +339,7 @@ const GCTRL=[
   ['exp','노출',-2,2,0.1,v=>`${v>0?'+':''}${(+v).toFixed(1)} EV`],
   ['turn','얼굴 방향',-90,90,1,v=>`${v}°`],
   ['tilt','고개 숙임',-25,25,1,v=>`${v}°`],
+  ['bodyTurn','몸 방향',-180,180,1,v=>`${v}°`],
   ['wallD','배경지 거리',.4,4,.05,v=>`${(+v).toFixed(2)} m`],
   ['wallA','배경지 각도',-60,60,1,v=>`${v}°`]
 ];
@@ -325,6 +347,8 @@ const rowHTML=(p,[k,t,mn,mx,stp])=>`<label class="row"><span>${t}</span><output 
 $('#lightCtrls').innerHTML=CTRL.map(c=>rowHTML('c-',c)).join('');
 $('#globalCtrls').innerHTML=GCTRL.map(c=>rowHTML('g-',c)).join('');
 $('#camCtrls').innerHTML=CAMCTRL.map(c=>rowHTML('k-',c)).join('');
+$('#jointCtrls').innerHTML=JCTRL.map(([k,t])=>rowHTML('p-',[k,t,-180,180,1])).join('');
+$('#jointSel').innerHTML=JOINTS.map(([k,n])=>`<option value="${k}">${n}</option>`).join('');
 $('#presets').innerHTML=PRESETS.map((p,i)=>`<button data-p="${i}">${p.n}</button>`).join('');
 
 /* ---------- 3D ---------- */
@@ -373,11 +397,54 @@ new THREE.GLTFLoader().parse(glb,'',g=>{
   const bottom=top-BUST_H,pole=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,bottom,12),darkMat);
   pole.position.y=bottom/2;pole.castShadow=true;body.add(pole);
   const foot=new THREE.Mesh(new THREE.CylinderGeometry(.18,.2,.03,32),darkMat);foot.position.y=.015;foot.receiveShadow=true;body.add(foot);
+  // 인형용 머리: 흉상과 같은 위치로 굽고, 목 아래(NECK_CUT) 삼각형은 버림. 잘린 단면은 인형 목 마디 속에 들어감
+  {wrap.updateMatrix();m.updateMatrix();
+   const M=new THREE.Matrix4().makeTranslation(0,PIV,0).multiply(wrap.matrix).multiply(m.matrix),g2=m.geometry.clone();g2.applyMatrix4(M);
+   const pos=g2.attributes.position,idx=g2.index?g2.index.array:[...Array(pos.count).keys()],keep=[];
+   for(let i=0;i<idx.length;i+=3)if(pos.getY(idx[i])>NECK_CUT&&pos.getY(idx[i+1])>NECK_CUT&&pos.getY(idx[i+2])>NECK_CUT)keep.push(idx[i],idx[i+1],idx[i+2]);
+   g2.setIndex(keep);g2.translate(0,-HJ_Y,0);
+   const hm=new THREE.Mesh(g2,skinMat);hm.castShadow=hm.receiveShadow=true;J.head.add(hm);}
   $('#loading').remove();req();
 },loadFail);
 }catch(e){loadFail(e)}
 
 const darkMat=new THREE.MeshStandardMaterial({color:0x2a2a2c,roughness:.8});
+/* ---------- 데생 인형: 관절(그룹) + 타원체 마디. 얼굴 높이는 흉상과 같게(HEAD_Y) ---------- */
+const HJ_Y=1.48,NECK_CUT=1.455,rig=new THREE.Group(),J={},SPH=new THREE.SphereGeometry(1,32,20);scene.add(rig);
+const dollMat=new THREE.MeshStandardMaterial({color:0xd8cdc2,roughness:.6}); // 몸은 노멀맵 없이 매끈하게
+{
+  const R=[ // 이름, 부모, 휴식 자세 절대 위치
+    ['pelvis',null,0,.95,0],['spine','pelvis',0,1.02,0],['chest','spine',0,1.2,0],['neck','chest',0,1.42,0],['head','neck',0,HJ_Y,0],
+    ['shoulderL','chest',.19,1.39,0],['elbowL','shoulderL',.19,1.1,0],['wristL','elbowL',.19,.84,0],
+    ['shoulderR','chest',-.19,1.39,0],['elbowR','shoulderR',-.19,1.1,0],['wristR','elbowR',-.19,.84,0],
+    ['hipL','pelvis',.095,.9,0],['kneeL','hipL',.095,.47,0],['ankleL','kneeL',.095,.07,0],
+    ['hipR','pelvis',-.095,.9,0],['kneeR','hipR',-.095,.47,0],['ankleR','kneeR',-.095,.07,0]];
+  const abs={};
+  for(const[n,par,x,y,z]of R){const j=new THREE.Group(),pa=par?abs[par]:[0,0,0];j.position.set(x-pa[0],y-pa[1],z-pa[2]);j.rotation.order='YXZ';(par?J[par]:rig).add(j);J[n]=j;abs[n]=[x,y,z]}
+  const seg=(n,rx,ry,rz,oy,oz=0)=>{const m=new THREE.Mesh(SPH,dollMat);m.scale.set(rx,ry,rz);m.position.set(0,oy,oz);m.castShadow=m.receiveShadow=true;J[n].add(m);return m};
+  seg('pelvis',.165,.1,.11,-.02);seg('spine',.125,.1,.09,.07);seg('chest',.18,.13,.11,.09);seg('chest',.13,.07,.09,.17);seg('neck',.056,.07,.064,.02,-.02);
+  for(const s of'LR'){
+    seg('shoulder'+s,.055,.055,.055,0);seg('shoulder'+s,.048,.15,.048,-.145);seg('elbow'+s,.04,.04,.04,0);seg('elbow'+s,.04,.13,.04,-.13);
+    seg('wrist'+s,.03,.03,.03,0);seg('wrist'+s,.018,.085,.045,-.085);
+    seg('hip'+s,.07,.07,.07,0);seg('hip'+s,.075,.21,.075,-.215);seg('knee'+s,.05,.05,.05,0);J['shin'+s]=seg('knee'+s,.055,.2,.055,-.2);
+    seg('ankle'+s,.035,.035,.035,0);seg('ankle'+s,.045,.035,.12,-.035,.06);
+  }
+}
+const rigStand=new THREE.Group();scene.add(rigStand);
+{const p=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,.86,12),darkMat);p.position.y=.43;p.castShadow=true;rigStand.add(p);
+ const f=new THREE.Mesh(new THREE.CylinderGeometry(.18,.2,.03,32),darkMat);f.position.y=.015;f.receiveShadow=true;rigStand.add(f);}
+function applyMq(){
+  const t=st.mq in MQTYPES?st.mq:'bust',bust=t==='bust';
+  head.visible=body.visible=bust;rig.visible=!bust;rigStand.visible=!bust&&t!=='full';
+  J.shoulderL.visible=J.shoulderR.visible=t!=='torso';
+  J.hipL.visible=J.hipR.visible=['thigh','knee','full'].includes(t);
+  J.kneeL.visible=J.kneeR.visible=['knee','full'].includes(t);
+  J.ankleL.visible=J.ankleR.visible=t==='full';
+  for(const s of'LR'){const m=J['shin'+s];m.scale.y=t==='knee'?.1:.2;m.position.y=t==='knee'?-.1:-.2}
+  for(const[n]of JOINTS){const r=(st.pose&&st.pose[n])||[0,0,0];J[n].rotation.set(r[0]*D2R,r[1]*D2R,r[2]*D2R)}
+  J.head.rotation.set(st.tilt*D2R,st.turn*D2R,0);
+  rig.rotation.y=(st.bodyTurn||0)*D2R;
+}
 /* 카메라 오브젝트 (전체 보기에서 보이고, 카메라 모드에서는 이 시점으로 들어감). +z가 렌즈 방향 */
 const camObj=new THREE.Group(),camModel=new THREE.Group();camObj.userData.k='cam3';scene.add(camObj);camObj.add(camModel);
 {const m=new THREE.MeshStandardMaterial({color:0x1b1b1d,roughness:.45}),add=(g,x,y,z)=>{const o=new THREE.Mesh(g,m);o.position.set(x,y,z);camModel.add(o);return o};
@@ -432,7 +499,7 @@ function apply(){
   }
   hemi.intensity=st.amb/100*2;
   renderer.toneMappingExposure=2**st.exp;
-  head.rotation.y=st.turn*D2R;head.rotation.x=st.tilt*D2R;
+  head.rotation.y=(st.turn+(st.bodyTurn||0))*D2R;head.rotation.x=st.tilt*D2R;applyMq();
   floorMat.color.set(st.bg);wallMat.color.set(st.bg);
   const wa=st.wallA*D2R;wallG.position.set(-Math.sin(wa)*st.wallD,0,-Math.cos(wa)*st.wallD);wallG.rotation.y=wa;
   applyCam();updateCamObj();
@@ -459,7 +526,7 @@ function applyCam(){
   cam.position.copy(p);cam.up.set(0,1,0);
   cam.lookAt(p.clone().add(new THREE.Vector3(Math.sin(yw)*Math.cos(pt),Math.sin(pt),Math.cos(yw)*Math.cos(pt))));cam.updateMatrixWorld();
   if(c.af){ // 얼굴(눈 근처)까지의 거리에 초점
-    head.updateMatrixWorld();const eye=head.localToWorld(new THREE.Vector3(0,HEAD_Y+.03-PIV,.095)),fwd=new THREE.Vector3();
+    const hj=st.mq==='bust'||!(st.mq in MQTYPES)?head:J.head;hj.updateMatrixWorld(true);const eye=hj.localToWorld(new THREE.Vector3(0,HEAD_Y+.03-(hj===head?PIV:HJ_Y),.095)),fwd=new THREE.Vector3();
     cam.getWorldDirection(fwd);c.fd=Math.round(clamp(eye.sub(p).dot(fwd),.3,6)*100)/100;
   }
 }
@@ -656,6 +723,12 @@ function syncOutputs(){
   for(const [k,,,,,f] of CTRL){$('#c-'+k).value=st[sel][k];$('#oc-'+k).textContent=f(st[sel][k])}
   for(const [k,,,,,f] of GCTRL){$('#g-'+k).value=st[k];$('#og-'+k).textContent=f(st[k])}
   for(const [k,,,,,f] of CAMCTRL){$('#k-'+k).value=st.cm[k];$('#ok-'+k).textContent=f(st.cm[k])}
+  {const pr=on=>`aria-pressed="${on}"`,tp=Object.entries(MQTYPES).map(([k,n])=>`<button data-mqt="${k}" ${pr(st.mq===k)}>${n}</button>`).join(''),
+     ps=POSES.map((q,i)=>`<button data-pose="${i}" ${pr(JSON.stringify(q.p)===JSON.stringify(st.pose))}>${q.n}</button>`).join('');
+   $('#mqType').innerHTML=tp;$('#cMqType').innerHTML=tp;$('#poseSeg').innerHTML=ps;$('#cPose').innerHTML=ps;
+   const jn=$('#jointSel').value||'pelvis',r=(st.pose&&st.pose[jn])||[0,0,0];
+   JCTRL.forEach(([k],i)=>{$('#p-'+k).value=r[i];$('#op-'+k).textContent=r[i]+'°'});
+   const off=st.mq==='bust';for(const el of[$('#jointSel'),...document.querySelectorAll('#jointCtrls input,#poseSeg button')])el.disabled=off;}
   $('#af').checked=st.cm.af;$('#dc').checked=st.cm.dc;
   {const c=st.cm,pr=(on)=>`aria-pressed="${on}"`;
    $('#q-f').value=c.f;$('#oq-f').textContent=c.f+'mm';$('#q-fd').value=c.fd;$('#oq-fd').textContent=c.fd.toFixed(2)+' m'+(c.af?' · 얼굴 AF':' · MF');
@@ -690,6 +763,8 @@ document.querySelector('.panel').addEventListener('input',e=>{
   const id=e.target.id;
   if(id.startsWith('c-'))st[sel][id.slice(2)]=+e.target.value;
   else if(id.startsWith('g-'))st[id.slice(2)]=+e.target.value;
+  else if(id.startsWith('p-')){const jn=$('#jointSel').value,r=[...((st.pose&&st.pose[jn])||[0,0,0])];r['xyz'.indexOf(id[2])]=+e.target.value;st.pose={...st.pose,[jn]:r}}
+  else if(id==='jointSel'){syncOutputs();return}
   else if(id.startsWith('k-')){st.cm[id.slice(2)]=+e.target.value;if(id==='k-fd')st.cm.af=false}
   else if(id==='af')st.cm.af=e.target.checked;
   else if(id==='dc')st.cm.dc=e.target.checked;
@@ -704,6 +779,8 @@ $('#presets').addEventListener('click',e=>{
   for(const k of LIGHTS)st[k]={...clone(BASE[k]),on:true,col:'#ffffff',...(pr[k]||{})};
   syncUI();update();
 });
+$('#mqType').addEventListener('click',e=>{const b=e.target.closest('[data-mqt]');if(b){st.mq=b.dataset.mqt;update()}});
+$('#poseSeg').addEventListener('click',e=>{const b=e.target.closest('[data-pose]');if(b){st.pose=clone(POSES[+b.dataset.pose].p);update()}});
 $('#arSeg').addEventListener('click',e=>{const b=e.target.closest('[data-ar]');if(b){st.cm.ar=b.dataset.ar;update()}});
 $('#gridSeg').addEventListener('click',e=>{const b=e.target.closest('[data-grid]');if(b){st.cm.grid=b.dataset.grid;update()}});
 $('#reset').onclick=()=>{st=fresh();sel='key';syncUI();update()};
@@ -726,9 +803,10 @@ function setRay(e){
   ndc.set(u*2-1,v*2-1);ray.setFromCamera(ndc,cam);
 }
 wall.userData.k='wall';
+const shown=o=>{for(;o;o=o.parent)if(!o.visible)return false;return true};
 function hitLight(e){ // 조명 > 마네킹/바닥 > 벽 순서로 맞은 대상
-  setRay(e);const objs=[floor,head,body,wall];if(camObj.visible)objs.push(camModel);for(const k of LIGHTS)if(st[k].on)objs.push(L[k].pick,L[k].g);
-  const h=ray.intersectObjects(objs,true)[0];let o=h&&h.object;while(o&&!o.userData.k)o=o.parent;return o?o.userData.k:null;
+  setRay(e);const objs=[floor,head,body,rig,rigStand,wall];if(camObj.visible)objs.push(camModel);for(const k of LIGHTS)if(st[k].on)objs.push(L[k].pick,L[k].g);
+  const h=ray.intersectObjects(objs,true).find(x=>shown(x.object));let o=h&&h.object;while(o&&!o.userData.k)o=o.parent;return o?o.userData.k:null;
 }
 const isCam3=()=>pick3==='cam3',isWall=()=>pick3==='wall',isMq=()=>pick3==='mq',isLight=()=>LIGHTS.includes(pick3);
 const dragging=()=>pick3&&(mode==='move'||mode==='rot');
@@ -740,7 +818,7 @@ function glow(){
   }
   wallEdge.visible=isWall();wallMat.emissive.set(isWall()?(mode?MODE[mode].c:'#ffffff'):'#000000');wallMat.emissiveIntensity=.03;
   if(isWall())wallEdge.material.color.set(mode?MODE[mode].c:'#ffffff');
-  skinMat.emissive.set(isMq()?MODE.rot.c:'#000000');skinMat.emissiveIntensity=.08;
+  for(const mt of[skinMat,dollMat]){mt.emissive.set(isMq()?(mode?MODE[mode].c:MODE.rot.c):'#000000');mt.emissiveIntensity=.08}
   camShell.visible=isCam3();if(isCam3())camShell.material.color.set(mode?MODE[mode].c:'#ffffff');
   req();
 }
@@ -748,11 +826,14 @@ function renderCtx(){
   const m=$('#ctx');m.hidden=!pick3;controls.enabled=!dragging()&&!camOn();
   if(!pick3){glow();return}
   $('#ctxName').textContent=isCam3()?'카메라':isWall()?'배경지':isMq()?'마네킹':NAME[pick3]+' 조명';
-  for(const b of m.querySelectorAll('[data-m]'))b.hidden=(isMq()&&b.dataset.m!=='rot')||(isCam3()&&b.dataset.m==='adj');
+  for(const b of m.querySelectorAll('[data-m]')){
+    b.hidden=isCam3()&&b.dataset.m==='adj';
+    b.querySelector('.ml').textContent=isMq()?{move:'몸 방향',rot:'고개',adj:'자세'}[b.dataset.m]:{move:'이동',rot:'회전',adj:'조절'}[b.dataset.m];
+  }
   for(const b of m.querySelectorAll('[data-m]'))b.setAttribute('aria-pressed',b.dataset.m===mode);
-  $('#ctxAdj').hidden=mode!=='adj'||!isLight();$('#ctxWall').hidden=mode!=='adj'||!isWall();$('#aimReset').hidden=mode!=='rot';
+  $('#ctxAdj').hidden=mode!=='adj'||!isLight();$('#ctxWall').hidden=mode!=='adj'||!isWall();$('#ctxPose').hidden=mode!=='adj'||!isMq();$('#aimReset').hidden=!(mode==='rot'||(isMq()&&mode==='move'));
   $('#aimReset').textContent=isLight()||isCam3()?'피사체 쪽으로 다시 겨누기':'정면으로 되돌리기';
-  $('#ctxTip').textContent=!mode?'모드를 골라주세요':isCam3()?CAMTIP[mode]:isWall()?WALLTIP[mode]||'':isMq()?'좌우로 끌면 얼굴이 돌아가고, 위아래로 끌면 고개를 숙이거나 들어요':MODE[mode].tip;$('#ctxTip').hidden=mode==='adj';
+  $('#ctxTip').textContent=!mode?'모드를 골라주세요':isCam3()?CAMTIP[mode]:isWall()?WALLTIP[mode]||'':isMq()?{move:'좌우로 끌면 몸 전체가 돌아가요',rot:'좌우로 끌면 얼굴이 돌아가고, 위아래로 끌면 고개를 숙이거나 들어요',adj:''}[mode]:MODE[mode].tip;$('#ctxTip').hidden=mode==='adj';
   syncOutputs();glow();placeCtx();
 }
 function openCtx(k){openQ(false);pick3=k;if(LIGHTS.includes(k)&&sel!==k){sel=k;syncUI()}renderCtx()}
@@ -767,8 +848,10 @@ function placeCtx(){
 $('#ctx').addEventListener('click',e=>{
   const b=e.target.closest('[data-m]');
   if(b){mode=mode===b.dataset.m?null:b.dataset.m;renderCtx();return}
+  {let c;if(c=e.target.closest('[data-mqt]')){st.mq=c.dataset.mqt;update();renderCtx();return}
+   if(c=e.target.closest('[data-pose]')){st.pose=clone(POSES[+c.dataset.pose].p);update();renderCtx();return}}
   if(e.target.closest('#ctxClose'))closeCtx();
-  if(e.target.closest('#aimReset')){if(isCam3()){st.cm.pan=0;st.cm.tilt=0}else if(isWall())st.wallA=0;else if(isMq()){st.turn=0;st.tilt=0}else{st[pick3].yaw=0;st[pick3].pitch=0}update()}
+  if(e.target.closest('#aimReset')){if(isCam3()){st.cm.pan=0;st.cm.tilt=0}else if(isWall())st.wallA=0;else if(isMq()){if(mode==='move')st.bodyTurn=0;else{st.turn=0;st.tilt=0}}else{st[pick3].yaw=0;st[pick3].pitch=0}update()}
 });
 $('#ctx').addEventListener('input',e=>{
   if(e.target.id==='w-col'){st.bg=e.target.value;update();return}
@@ -798,7 +881,7 @@ view.addEventListener('pointerdown',e=>{
   if(ptrs.size===1){
     gs={id:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now(),moved:false,pinch:0};
     if(camOn()&&!dragging())gs.cam={pan:st.cm.pan,tilt:st.cm.tilt,f:st.cm.f};
-    if(dragging())Object.assign(gs,isCam3()?{p:{...st.cm},sx:camSign()}:isMq()?{p:{turn:st.turn,tilt:st.tilt}}:isWall()?{p:{wallD:st.wallD,wallA:st.wallA},sx:cam.position.z>=0?1:-1}:{p:{...st[pick3]},sx:screenSign()});
+    if(dragging())Object.assign(gs,isCam3()?{p:{...st.cm},sx:camSign()}:isMq()?{p:{turn:st.turn,tilt:st.tilt,bodyTurn:st.bodyTurn||0}}:isWall()?{p:{wallD:st.wallD,wallA:st.wallA},sx:cam.position.z>=0?1:-1}:{p:{...st[pick3]},sx:screenSign()});
   }else if(ptrs.size===2&&gs&&gs.cam){
     const[a,b]=[...ptrs.values()];gs.pinch=Math.hypot(a.x-b.x,a.y-b.y);gs.f0=st.cm.f;gs.moved=true;
   }else if(ptrs.size===2&&gs&&dragging()&&mode==='move'&&!isMq()){
@@ -828,7 +911,8 @@ view.addEventListener('pointermove',e=>{
   }
   if(isMq()){
     if(e.pointerId!==gs.id)return;
-    st.turn=Math.round(clamp(gs.p.turn+dx*.4,-90,90));st.tilt=Math.round(clamp(gs.p.tilt+dy*.2,-25,25));
+    if(mode==='move')st.bodyTurn=Math.round(wrapA(gs.p.bodyTurn+dx*.4));
+    else{st.turn=Math.round(clamp(gs.p.turn+dx*.4,-90,90));st.tilt=Math.round(clamp(gs.p.tilt+dy*.2,-25,25))}
     update(false);return;
   }
   if(isWall()){
@@ -863,7 +947,7 @@ function endPtr(e,cancel){
 view.addEventListener('pointerup',e=>endPtr(e,false),true);
 view.addEventListener('pointercancel',e=>endPtr(e,true),true);
 function focusAt(e){
-  setRay(e);const h=ray.intersectObjects([head,body,wall,floor],true)[0];if(!h)return;
+  setRay(e);const h=ray.intersectObjects([head,body,rig,rigStand,wall,floor],true).find(x=>shown(x.object));if(!h)return;
   const fwd=new THREE.Vector3();cam.getWorldDirection(fwd);
   st.cm.fd=Math.round(clamp(h.point.clone().sub(cam.position).dot(fwd),.3,6)*100)/100;st.cm.af=false;
   const r=view.getBoundingClientRect(),fb=$('#focusBox');fb.style.left=(e.clientX-r.left)+'px';fb.style.top=(e.clientY-r.top)+'px';fb.hidden=false;
