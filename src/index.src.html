@@ -21,7 +21,24 @@
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans KR",system-ui,sans-serif;overflow-x:clip}
 .app{display:grid;grid-template-columns:minmax(0,1fr) 380px;height:100dvh}
-.view{position:relative;background:#2b2b2d;overflow:hidden}
+.left{display:flex;flex-direction:column;min-height:0;min-width:0}
+.view{position:relative;background:#2b2b2d;overflow:hidden;flex:1;min-height:0}
+.cambar{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#1d1d1f;color:#eee;border-top:1px solid #333}
+.cambar button{border:1px solid rgba(255,255,255,.22);background:transparent;border-radius:999px;min-height:40px;padding:0 12px;font-size:13px;white-space:nowrap;color:#eee}
+#saveCam{background:#2457e6;border-color:#2457e6;flex:none}#homeCam,#shareBtn,#photoBtn{flex:none}
+.saves{display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0}
+.save{display:flex;align-items:center;border:1px solid rgba(255,255,255,.22);border-radius:999px;flex:none}
+.cambar .save button{border:0;border-radius:999px}.save .load{padding:0 4px 0 12px}.save .load small{color:#a9a9b0;margin-left:4px}.save .del{padding:0 12px;color:#a9a9b0}
+.dlg{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:16px}
+.dlg[hidden]{display:none}
+.dlg-box{width:min(460px,100%);max-height:90vh;overflow:auto;background:#1d1d1f;color:#eee;border-radius:14px;padding:14px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.dlg-box .ctx-h button{border:0;background:rgba(255,255,255,.12);border-radius:8px;width:36px;height:36px;color:#eee}
+.dlg-msg{font-size:14px;margin:4px 0 10px;color:#d6d6db}
+.dlg-in{width:100%;font:13px/1.4 inherit;padding:10px;border-radius:8px;border:1px solid #444;background:#111;color:#eee}
+.dlg-img{display:block;max-width:100%;max-height:60vh;margin:0 auto;border-radius:6px}
+.dlg-act{display:flex;justify-content:flex-end;margin-top:10px}.dlg-act button{border:0;background:#2457e6;color:#fff;border-radius:999px;min-height:40px;padding:0 16px}
+.dlg-act button[hidden]{display:none}
+.saves .empty{font-size:12px;color:#8d8d94}
 .view canvas{display:block;width:100%;height:100%;touch-action:none}
 .hud{position:absolute;left:12px;right:12px;top:12px;display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;pointer-events:none}
 .hud>*{pointer-events:auto}
@@ -37,6 +54,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .caminfo{position:absolute;transform:translate(-50%,-100%);font-size:12px;padding:4px 10px;pointer-events:none}
 .caminfo[hidden],.focusbox[hidden]{display:none}
 .focusbox{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border:2px solid #ffd21f;border-radius:4px;pointer-events:none}
+.fold summary{cursor:pointer;font-size:13px;color:#e6e6ea;min-height:32px;display:flex;align-items:center}
 .qcam{width:272px;max-height:calc(100% - 70px);overflow:auto}
 .q-l{display:flex;justify-content:space-between;font-size:13px;margin:10px 0 4px;color:#e6e6ea}.q-l output{color:#c9c9cf;font-variant-numeric:tabular-nums}
 .chips{display:flex;flex-wrap:wrap;gap:4px}
@@ -44,6 +62,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .chips button[aria-pressed=true]{background:#2457e6;border-color:#2457e6;color:#fff}
 .qcam input[type=range]{width:100%;height:28px;accent-color:#8aabff;margin:4px 0 0}
 .q-c{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px}
+.sel{font:inherit;font-size:14px;min-height:40px;padding:0 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
 .seg{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 8px}
 .seg button{border:1px solid var(--line);background:var(--chip);border-radius:8px;min-height:36px;padding:0 10px;font-size:13px}
 .seg button[aria-pressed=true]{border-color:var(--acc);color:var(--acc);font-weight:600}
@@ -97,7 +116,8 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
 #ctxAdj{margin-top:6px}#ctxAdj .row output{color:#c9c9cf}#ctxAdj input[type=range]{accent-color:#ffd21f}#ctxAdj .line{margin:6px 0 0}
 @media(max-width:899px){
   .app{grid-template-columns:minmax(0,1fr);height:auto}
-  .view{height:58vh;min-height:320px}
+  .view{height:58vh;min-height:320px;flex:none}
+  .cambar{flex-wrap:wrap}.saves{order:3;flex-basis:100%}
   .panel{border-left:0;border-top:1px solid var(--line)}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -105,6 +125,7 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
 </head>
 <body>
 <div class="app">
+  <div class="left">
   <div class="view" id="view">
     <svg class="ov" id="ov"></svg>
     <div class="pill caminfo" id="camInfo" hidden></div>
@@ -131,12 +152,16 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
     <div class="ctx" id="ctx" hidden>
       <div class="ctx-h"><b id="ctxName">키 조명</b><button id="ctxClose" aria-label="닫기">✕</button></div>
       <div class="ctx-m">
-        <button data-m="move" style="--mc:#ff3d7f" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg>이동<i></i></button>
-        <button data-m="rot" style="--mc:#2f7bff" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>회전<i></i></button>
-        <button data-m="adj" style="--mc:#ffd21f" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>조절<i></i></button>
+        <button data-m="move" style="--mc:#ff3d7f" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg><span class="ml">이동</span><i></i></button>
+        <button data-m="rot" style="--mc:#2f7bff" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg><span class="ml">회전</span><i></i></button>
+        <button data-m="adj" style="--mc:#ffd21f" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span class="ml">조절</span><i></i></button>
       </div>
       <p class="ctx-tip" id="ctxTip"></p>
       <button class="ctx-sub" id="aimReset" hidden>피사체 쪽으로 다시 겨누기</button>
+      <div id="ctxPose" hidden><details class="fold"><summary>종류 · 자세 프리셋</summary><div class="q-l"><span>종류</span></div><div class="chips" id="cMqType"></div><div class="q-l"><span>자세</span></div><div class="chips" id="cPose"></div></details>
+        <div id="jEdit"><div class="q-l"><span>관절</span><output id="selJn">팔다리를 탭하세요</output></div>
+        <div class="chips"><button id="twistBtn" aria-pressed="false">비틀기</button><button id="jReset">이 관절 초기화</button></div>
+        <p class="ctx-tip" id="jTip"></p></div></div>
       <div id="ctxWall" hidden><div class="line"><span>배경지 색</span><input type="color" id="w-col"></div></div>
       <div id="ctxAdj" hidden>
         <label class="row"><span>세기</span><output id="oa-pow"></output><input type="range" id="a-pow" min="0" max="100" step="1"></label>
@@ -144,6 +169,14 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
         <div class="line"><label><input type="checkbox" id="a-on"> 켜기</label><label>색 <input type="color" id="a-col"></label></div>
       </div>
     </div>
+  </div>
+  <div class="cambar">
+    <button id="saveCam">＋ 현재 카메라 저장</button>
+    <div class="saves" id="saves"></div>
+    <button id="homeCam">초기 위치</button>
+    <button id="shareBtn">링크 공유</button>
+    <button id="photoBtn">사진 저장</button>
+  </div>
   </div>
   <aside class="panel">
     <h1>라이팅 시뮬레이터</h1>
@@ -164,6 +197,13 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
     <div id="lightCtrls"></div>
     <p class="note">방향 0°는 카메라 쪽, ±90°는 옆, 180°는 피사체 뒤예요.</p>
 
+    <h2>마네킹</h2>
+    <div class="seg" id="mqType"></div>
+    <div class="line" style="margin:4px 0 0;min-height:0"><span>자세</span></div><div class="seg" id="poseSeg"></div>
+    <div class="line"><span>관절</span><select id="jointSel" class="sel"></select></div>
+    <div id="jointCtrls"></div>
+    <p class="note" id="poseNote">왼쪽·오른쪽은 인형 기준이에요. 3D 화면의 마네킹 메뉴 → 자세에서 팔다리를 직접 잡아 움직일 수도 있어요. 흉상은 자세를 바꿀 수 없어요. 얼굴 방향·고개·몸 방향은 아래 "전체"에 있어요.</p>
+
     <h2>카메라</h2>
     <div class="line" style="margin:4px 0 0;min-height:0"><span>화면비</span></div><div class="seg" id="arSeg"></div>
     <div class="line" style="margin:4px 0 0;min-height:0"><span>격자</span></div><div class="seg" id="gridSeg"></div>
@@ -180,6 +220,13 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
   </aside>
 </div>
 
+<div class="dlg" id="dlg" hidden><div class="dlg-box" role="dialog" aria-modal="true" aria-labelledby="dlgT">
+  <div class="ctx-h"><b id="dlgT"></b><button id="dlgClose" aria-label="닫기">✕</button></div>
+  <p class="dlg-msg" id="dlgMsg"></p>
+  <input class="dlg-in" id="dlgIn" readonly hidden>
+  <img class="dlg-img" id="dlgImg" alt="저장할 사진" hidden>
+  <div class="dlg-act"><button id="dlgCopy" hidden>다시 복사</button></div>
+</div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -239,11 +286,23 @@ const PRESETS=[
   {n:'클램쉘',key:{az:0,el:40,d:1.3,pow:65,size:70},fill:{az:0,el:-30,d:1.1,pow:30,size:70},rim:{az:180,el:35,d:1.8,pow:50,size:15}},
   {n:'컬러 젤',key:{az:25,el:30,d:1.6,pow:50,size:50},fill:{az:-120,el:15,d:1.5,pow:65,size:15,col:'#3fa9ff'},rim:{az:120,el:15,d:1.5,pow:65,size:15,col:'#ff4fa0'}}
 ];
-const GBASE={amb:12,exp:0,turn:0,tilt:0,bg:'#8c8a86',wallD:1.4,wallA:0,
+/* 데생 인형 자세 프리셋: 관절별 [x,y,z]도. x=앞뒤 굽힘, y=비틀기, z=옆으로. 왼쪽/오른쪽은 인형 기준 */
+const POSES=[
+  {n:'기본',p:{shoulderL:[0,0,8],shoulderR:[0,0,-8],elbowL:[-8,0,0],elbowR:[-8,0,0]}},
+  {n:'콘트라포스토',p:{pelvis:[0,0,5],chest:[0,0,-5],neck:[0,0,3],shoulderL:[0,0,8],shoulderR:[5,0,-6],elbowL:[-10,0,0],elbowR:[-15,0,0],hipL:[0,0,-3],hipR:[-6,0,4],kneeR:[14,0,0],ankleR:[-8,0,0]}},
+  {n:'허리에 손',p:{shoulderL:[10,0,45],shoulderR:[10,0,-45],elbowL:[0,0,-105],elbowR:[0,0,105],wristL:[0,0,20],wristR:[0,0,-20]}},
+  {n:'손 모으기',p:{shoulderL:[-20,0,-8],shoulderR:[-20,0,8],elbowL:[-70,0,-25],elbowR:[-70,0,25]}},
+  {n:'한 팔 들기',p:{shoulderL:[0,0,8],shoulderR:[0,0,-160],elbowL:[-8,0,0],elbowR:[0,0,-15]}},
+  {n:'걷기',p:{hipL:[-22,0,0],kneeL:[8,0,0],hipR:[18,0,0],kneeR:[30,0,0],ankleR:[-10,0,0],shoulderL:[18,0,8],shoulderR:[-18,0,-8],elbowL:[-10,0,0],elbowR:[-25,0,0]}}
+];
+const MQTYPES={bust:'흉상',torso:'토르소',upper:'상반신 전체',thigh:'허벅지까지',knee:'무릎 아래까지',full:'전신'};
+const JOINTS=[['pelvis','골반'],['spine','허리'],['chest','가슴'],['neck','목'],['shoulderL','왼쪽 어깨'],['elbowL','왼쪽 팔꿈치'],['wristL','왼쪽 손목'],['shoulderR','오른쪽 어깨'],['elbowR','오른쪽 팔꿈치'],['wristR','오른쪽 손목'],['hipL','왼쪽 고관절'],['kneeL','왼쪽 무릎'],['ankleL','왼쪽 발목'],['hipR','오른쪽 고관절'],['kneeR','오른쪽 무릎'],['ankleR','오른쪽 발목']];
+const GBASE={mq:'bust',bodyTurn:0,pose:JSON.parse(JSON.stringify(POSES[0].p)),amb:12,exp:0,turn:0,tilt:0,bg:'#8c8a86',wallD:1.4,wallA:0,
   cm:{on:true,az:0,dist:1.7,h:1.56,pan:0,tilt:0,f:85,Ni:4,fd:1.6,af:true,ar:'2:3',grid:'thirds',dc:false}};
 const STOPS=[1.2,1.4,1.8,2,2.8,4,5.6,8,11,16];
 const AR={'2:3':[2,3],'3:2':[3,2],'4:5':[4,5],'1:1':[1,1],'16:9':[16,9]};
 const GRIDS={off:'끔',thirds:'3분할',phi:'황금비',cross:'십자'};
+const JCTRL=[['x','앞뒤 굽힘'],['y','비틀기'],['z','옆으로']];
 const CAMCTRL=[
   ['f','렌즈',24,200,1,v=>`${v}mm`],
   ['Ni','조리개',0,STOPS.length-1,1,i=>`f/${STOPS[i]}`],
@@ -256,9 +315,16 @@ const CAMCTRL=[
 const clone=o=>JSON.parse(JSON.stringify(o));
 function fresh(){const s={...clone(GBASE)};for(const k of LIGHTS)s[k]=clone(BASE[k]);return s}
 let st=fresh();
-try{const sv=JSON.parse(localStorage.getItem('litesim1')||'null');if(sv&&sv.key&&sv.fill&&sv.rim)st={...st,...sv,cm:{...st.cm,...(sv.cm||{})}}}catch(e){}
+// 저장된 값을 기본값 위에 덮기. 새 항목이 생겨도 기본값이 채워지도록 항목별로 병합
+function mergeState(sv){
+  const b=fresh();if(!sv||typeof sv!=='object')return b;
+  const o={...b,...sv,cm:{...b.cm,...(sv.cm||{})}};
+  for(const k of LIGHTS)o[k]={...b[k],...(sv[k]||{})};
+  return o;
+}
+try{const sv=JSON.parse(localStorage.getItem('litesim1')||'null');if(sv&&sv.key&&sv.fill&&sv.rim)st=mergeState(sv)}catch(e){}
 let sel='key',pick3=null,mode=null;
-const save=()=>{try{localStorage.setItem('litesim1',JSON.stringify(st))}catch(e){}};
+let save=()=>{try{localStorage.setItem('litesim1',JSON.stringify(st))}catch(e){}};
 
 const sizeM=s=>0.12+s/100*0.9;
 const sizeName=s=>s<15?'맨 플래시':s<40?'소형 소프트박스':s<70?'중형 소프트박스':'대형 옥타';
@@ -275,6 +341,7 @@ const GCTRL=[
   ['exp','노출',-2,2,0.1,v=>`${v>0?'+':''}${(+v).toFixed(1)} EV`],
   ['turn','얼굴 방향',-90,90,1,v=>`${v}°`],
   ['tilt','고개 숙임',-25,25,1,v=>`${v}°`],
+  ['bodyTurn','몸 방향',-180,180,1,v=>`${v}°`],
   ['wallD','배경지 거리',.4,4,.05,v=>`${(+v).toFixed(2)} m`],
   ['wallA','배경지 각도',-60,60,1,v=>`${v}°`]
 ];
@@ -282,6 +349,8 @@ const rowHTML=(p,[k,t,mn,mx,stp])=>`<label class="row"><span>${t}</span><output 
 $('#lightCtrls').innerHTML=CTRL.map(c=>rowHTML('c-',c)).join('');
 $('#globalCtrls').innerHTML=GCTRL.map(c=>rowHTML('g-',c)).join('');
 $('#camCtrls').innerHTML=CAMCTRL.map(c=>rowHTML('k-',c)).join('');
+$('#jointCtrls').innerHTML=JCTRL.map(([k,t])=>rowHTML('p-',[k,t,-180,180,1])).join('');
+$('#jointSel').innerHTML=JOINTS.map(([k,n])=>`<option value="${k}">${n}</option>`).join('');
 $('#presets').innerHTML=PRESETS.map((p,i)=>`<button data-p="${i}">${p.n}</button>`).join('');
 
 /* ---------- 3D ---------- */
@@ -330,11 +399,66 @@ new THREE.GLTFLoader().parse(glb,'',g=>{
   const bottom=top-BUST_H,pole=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,bottom,12),darkMat);
   pole.position.y=bottom/2;pole.castShadow=true;body.add(pole);
   const foot=new THREE.Mesh(new THREE.CylinderGeometry(.18,.2,.03,32),darkMat);foot.position.y=.015;foot.receiveShadow=true;body.add(foot);
+  // 인형용 머리: 흉상과 같은 위치로 굽고, 목 아래(NECK_CUT) 삼각형은 버림. 잘린 단면은 인형 목 마디 속에 들어감
+  {wrap.updateMatrix();m.updateMatrix();
+   const M=new THREE.Matrix4().makeTranslation(0,PIV,0).multiply(wrap.matrix).multiply(m.matrix),g2=m.geometry.clone();g2.applyMatrix4(M);
+   const pos=g2.attributes.position,idx=g2.index?g2.index.array:[...Array(pos.count).keys()],keep=[];
+   for(let i=0;i<idx.length;i+=3)if(pos.getY(idx[i])>NECK_CUT&&pos.getY(idx[i+1])>NECK_CUT&&pos.getY(idx[i+2])>NECK_CUT)keep.push(idx[i],idx[i+1],idx[i+2]);
+   g2.setIndex(keep);g2.translate(0,-HJ_Y,0);
+   const hm=new THREE.Mesh(g2,skinMat);hm.castShadow=hm.receiveShadow=true;J.head.add(hm);}
   $('#loading').remove();req();
 },loadFail);
 }catch(e){loadFail(e)}
 
 const darkMat=new THREE.MeshStandardMaterial({color:0x2a2a2c,roughness:.8});
+/* ---------- 데생 인형: 관절(그룹) + 타원체 마디. 얼굴 높이는 흉상과 같게(HEAD_Y) ---------- */
+const HJ_Y=1.48,NECK_CUT=1.455,rig=new THREE.Group(),J={},SPH=new THREE.SphereGeometry(1,32,20);scene.add(rig);
+const dollMat=new THREE.MeshStandardMaterial({color:0xd8cdc2,roughness:.6}); // 몸은 노멀맵 없이 매끈하게
+{
+  const R=[ // 이름, 부모, 휴식 자세 절대 위치
+    ['pelvis',null,0,.95,0],['spine','pelvis',0,1.02,0],['chest','spine',0,1.2,0],['neck','chest',0,1.42,0],['head','neck',0,HJ_Y,0],
+    ['shoulderL','chest',.19,1.39,0],['elbowL','shoulderL',.19,1.1,0],['wristL','elbowL',.19,.84,0],
+    ['shoulderR','chest',-.19,1.39,0],['elbowR','shoulderR',-.19,1.1,0],['wristR','elbowR',-.19,.84,0],
+    ['hipL','pelvis',.095,.9,0],['kneeL','hipL',.095,.47,0],['ankleL','kneeL',.095,.07,0],
+    ['hipR','pelvis',-.095,.9,0],['kneeR','hipR',-.095,.47,0],['ankleR','kneeR',-.095,.07,0]];
+  const abs={};
+  for(const[n,par,x,y,z]of R){const j=new THREE.Group(),pa=par?abs[par]:[0,0,0];j.userData.jn=n;j.position.set(x-pa[0],y-pa[1],z-pa[2]);j.rotation.order='YXZ';(par?J[par]:rig).add(j);J[n]=j;abs[n]=[x,y,z]}
+  const seg=(n,rx,ry,rz,oy,oz=0)=>{const m=new THREE.Mesh(SPH,dollMat);m.scale.set(rx,ry,rz);m.position.set(0,oy,oz);m.castShadow=m.receiveShadow=true;J[n].add(m);return m};
+  seg('pelvis',.165,.1,.11,-.02);seg('spine',.125,.1,.09,.07);seg('chest',.18,.13,.11,.09);seg('chest',.13,.07,.09,.17);seg('neck',.056,.07,.064,.02,-.02);
+  for(const s of'LR'){
+    seg('shoulder'+s,.055,.055,.055,0);seg('shoulder'+s,.048,.15,.048,-.145);seg('elbow'+s,.04,.04,.04,0);seg('elbow'+s,.04,.13,.04,-.13);
+    seg('wrist'+s,.03,.03,.03,0);seg('wrist'+s,.018,.085,.045,-.085);
+    seg('hip'+s,.07,.07,.07,0);seg('hip'+s,.075,.21,.075,-.215);seg('knee'+s,.05,.05,.05,0);J['shin'+s]=seg('knee'+s,.055,.2,.055,-.2);
+    seg('ankle'+s,.035,.035,.035,0);seg('ankle'+s,.045,.035,.12,-.035,.06);
+  }
+}
+const handles={}; // 자세 모드에서만 보이는 관절 점 (몸에 가려지지 않게 맨 위에 그림)
+for(const[n]of JOINTS){const h=new THREE.Mesh(new THREE.SphereGeometry(.022,12,8),new THREE.MeshBasicMaterial({color:0xffffff,depthTest:false,transparent:true,opacity:.9,toneMapped:false}));
+  h.renderOrder=999;h.visible=false;h.userData.hj=n;J[n].add(h);handles[n]=h}
+const rigStand=new THREE.Group();scene.add(rigStand);
+{const p=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,.86,12),darkMat);p.position.y=.43;p.castShadow=true;rigStand.add(p);
+ const f=new THREE.Mesh(new THREE.CylinderGeometry(.18,.2,.03,32),darkMat);f.position.y=.015;f.receiveShadow=true;rigStand.add(f);}
+function applyMq(){
+  const t=st.mq in MQTYPES?st.mq:'bust',bust=t==='bust';
+  head.visible=body.visible=bust;rig.visible=!bust;rigStand.visible=!bust&&t!=='full';
+  J.shoulderL.visible=J.shoulderR.visible=t!=='torso';
+  J.hipL.visible=J.hipR.visible=['thigh','knee','full'].includes(t);
+  J.kneeL.visible=J.kneeR.visible=['knee','full'].includes(t);
+  J.ankleL.visible=J.ankleR.visible=t==='full';
+  for(const s of'LR'){const m=J['shin'+s];m.scale.y=t==='knee'?.1:.2;m.position.y=t==='knee'?-.1:-.2}
+  for(const[n]of JOINTS){const r=(st.pose&&st.pose[n])||[0,0,0];J[n].rotation.set(r[0]*D2R,r[1]*D2R,r[2]*D2R)}
+  J.head.rotation.set(st.tilt*D2R,st.turn*D2R,0);
+  rig.rotation.y=(st.bodyTurn||0)*D2R;
+}
+/* 카메라 오브젝트 (전체 보기에서 보이고, 카메라 모드에서는 이 시점으로 들어감). +z가 렌즈 방향 */
+const camObj=new THREE.Group(),camModel=new THREE.Group();camObj.userData.k='cam3';scene.add(camObj);camObj.add(camModel);
+{const m=new THREE.MeshStandardMaterial({color:0x1b1b1d,roughness:.45}),add=(g,x,y,z)=>{const o=new THREE.Mesh(g,m);o.position.set(x,y,z);camModel.add(o);return o};
+ add(new THREE.BoxGeometry(.14,.1,.08),0,0,-.02);add(new THREE.BoxGeometry(.05,.035,.05),0,.065,-.02);
+ add(new THREE.CylinderGeometry(.036,.036,.09,24),0,0,.065).rotation.x=Math.PI/2;}
+const camShell=new THREE.Mesh(new THREE.BoxGeometry(.19,.15,.24),new THREE.MeshBasicMaterial({side:THREE.BackSide,toneMapped:false}));camShell.position.z=.02;camShell.visible=false;camModel.add(camShell);
+const camPick=new THREE.Mesh(new THREE.SphereGeometry(.22,12,8),new THREE.MeshBasicMaterial({visible:false}));camModel.add(camPick);
+const camPole=new THREE.Mesh(new THREE.CylinderGeometry(.015,.015,1,8),darkMat);scene.add(camPole);
+const frus=new THREE.LineSegments(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:0x8aabff,toneMapped:false,transparent:true,opacity:.75}));camObj.add(frus);
 const L={};
 
 for(const k of LIGHTS){
@@ -380,10 +504,10 @@ function apply(){
   }
   hemi.intensity=st.amb/100*2;
   renderer.toneMappingExposure=2**st.exp;
-  head.rotation.y=st.turn*D2R;head.rotation.x=st.tilt*D2R;
+  head.rotation.y=(st.turn+(st.bodyTurn||0))*D2R;head.rotation.x=st.tilt*D2R;applyMq();
   floorMat.color.set(st.bg);wallMat.color.set(st.bg);
   const wa=st.wallA*D2R;wallG.position.set(-Math.sin(wa)*st.wallD,0,-Math.cos(wa)*st.wallD);wallG.rotation.y=wa;
-  applyCam();
+  applyCam();updateCamObj();
   req();
 }
 /* ---------- 카메라 모드 ---------- */
@@ -407,7 +531,7 @@ function applyCam(){
   cam.position.copy(p);cam.up.set(0,1,0);
   cam.lookAt(p.clone().add(new THREE.Vector3(Math.sin(yw)*Math.cos(pt),Math.sin(pt),Math.cos(yw)*Math.cos(pt))));cam.updateMatrixWorld();
   if(c.af){ // 얼굴(눈 근처)까지의 거리에 초점
-    head.updateMatrixWorld();const eye=head.localToWorld(new THREE.Vector3(0,HEAD_Y+.03-PIV,.095)),fwd=new THREE.Vector3();
+    const hj=st.mq==='bust'||!(st.mq in MQTYPES)?head:J.head;hj.updateMatrixWorld(true);const eye=hj.localToWorld(new THREE.Vector3(0,HEAD_Y+.03-(hj===head?PIV:HJ_Y),.095)),fwd=new THREE.Vector3();
     cam.getWorldDirection(fwd);c.fd=Math.round(clamp(eye.sub(p).dot(fwd),.3,6)*100)/100;
   }
 }
@@ -423,11 +547,22 @@ function drawOv(){
   info.style.left=(x+w/2)+'px';info.style.top=(y+h-8)+'px';
   info.textContent=`${c.f}mm · f/${STOPS[c.Ni]} · 초점 ${c.fd.toFixed(2)}m${c.af?' (얼굴 AF)':' (MF)'} · ${c.ar}`;
 }
+function updateCamObj(){
+  const on=!camOn();camObj.visible=camPole.visible=on;if(!on)return;
+  const p=camPos(),[yw,pt]=camYawPitch();camObj.position.copy(p);
+  camObj.lookAt(p.clone().add(new THREE.Vector3(Math.sin(yw)*Math.cos(pt),Math.sin(pt),Math.cos(yw)*Math.cos(pt))));
+  camPole.scale.y=Math.max(p.y-.05,.01);camPole.position.set(p.x,(p.y-.05)/2,p.z);
+  // 화각 범위: 카메라에서 초점면까지 네 모서리 선 + 초점면 사각형
+  const fr=frameRect(),ty=frameHalfTan(),tx=ty*fr.aw/fr.ah,f=st.cm.fd,c=[[1,1],[-1,1],[-1,-1],[1,-1]].map(([a,b])=>[a*tx*f,b*ty*f,f]),v=[];
+  for(const q of c)v.push(0,0,.11,...q);for(let i=0;i<4;i++)v.push(...c[i],...c[(i+1)%4]);
+  frus.geometry.setAttribute('position',new THREE.Float32BufferAttribute(v,3));frus.geometry.computeBoundingSphere();
+}
 function setCamMode(on){
+  if(on&&pick3==='cam3'){pick3=null;mode=null;$('#ctx').hidden=true;camShell.visible=false}
   st.cm.on=on;controls.enabled=!on;
   if(!on){cam.fov=32;cam.updateProjectionMatrix()}
   $('#camReset').setAttribute('aria-pressed',on);$('#camWide').setAttribute('aria-pressed',!on);
-  $('#hint').textContent=on?'끌기: 카메라 방향 · 핀치/휠: 줌 · 탭: 초점 맞추기 / 조명 메뉴':'조명 탭: 메뉴 · 빈 곳 드래그: 시점 회전';
+  $('#hint').textContent=on?'끌기: 카메라 방향 · 핀치/휠: 줌 · 탭: 초점 맞추기 / 조명 메뉴':'조명·카메라 탭: 메뉴 · 빈 곳 드래그: 시점 회전';
   update();
 }
 
@@ -593,6 +728,12 @@ function syncOutputs(){
   for(const [k,,,,,f] of CTRL){$('#c-'+k).value=st[sel][k];$('#oc-'+k).textContent=f(st[sel][k])}
   for(const [k,,,,,f] of GCTRL){$('#g-'+k).value=st[k];$('#og-'+k).textContent=f(st[k])}
   for(const [k,,,,,f] of CAMCTRL){$('#k-'+k).value=st.cm[k];$('#ok-'+k).textContent=f(st.cm[k])}
+  {const pr=on=>`aria-pressed="${on}"`,tp=Object.entries(MQTYPES).map(([k,n])=>`<button data-mqt="${k}" ${pr(st.mq===k)}>${n}</button>`).join(''),
+     ps=POSES.map((q,i)=>`<button data-pose="${i}" ${pr(JSON.stringify(q.p)===JSON.stringify(st.pose))}>${q.n}</button>`).join('');
+   $('#mqType').innerHTML=tp;$('#cMqType').innerHTML=tp;$('#poseSeg').innerHTML=ps;$('#cPose').innerHTML=ps;
+   const jn=$('#jointSel').value||'pelvis',r=(st.pose&&st.pose[jn])||[0,0,0];
+   JCTRL.forEach(([k],i)=>{$('#p-'+k).value=r[i];$('#op-'+k).textContent=r[i]+'°'});
+   const off=st.mq==='bust';for(const el of[$('#jointSel'),...document.querySelectorAll('#jointCtrls input,#poseSeg button')])el.disabled=off;}
   $('#af').checked=st.cm.af;$('#dc').checked=st.cm.dc;
   {const c=st.cm,pr=(on)=>`aria-pressed="${on}"`;
    $('#q-f').value=c.f;$('#oq-f').textContent=c.f+'mm';$('#q-fd').value=c.fd;$('#oq-fd').textContent=c.fd.toFixed(2)+' m'+(c.af?' · 얼굴 AF':' · MF');
@@ -627,6 +768,8 @@ document.querySelector('.panel').addEventListener('input',e=>{
   const id=e.target.id;
   if(id.startsWith('c-'))st[sel][id.slice(2)]=+e.target.value;
   else if(id.startsWith('g-'))st[id.slice(2)]=+e.target.value;
+  else if(id.startsWith('p-')){const jn=$('#jointSel').value,r=[...((st.pose&&st.pose[jn])||[0,0,0])];r['xyz'.indexOf(id[2])]=+e.target.value;st.pose={...st.pose,[jn]:r}}
+  else if(id==='jointSel'){syncOutputs();return}
   else if(id.startsWith('k-')){st.cm[id.slice(2)]=+e.target.value;if(id==='k-fd')st.cm.af=false}
   else if(id==='af')st.cm.af=e.target.checked;
   else if(id==='dc')st.cm.dc=e.target.checked;
@@ -641,6 +784,8 @@ $('#presets').addEventListener('click',e=>{
   for(const k of LIGHTS)st[k]={...clone(BASE[k]),on:true,col:'#ffffff',...(pr[k]||{})};
   syncUI();update();
 });
+$('#mqType').addEventListener('click',e=>{const b=e.target.closest('[data-mqt]');if(b){st.mq=b.dataset.mqt;update()}});
+$('#poseSeg').addEventListener('click',e=>{const b=e.target.closest('[data-pose]');if(b){st.pose=clone(POSES[+b.dataset.pose].p);update()}});
 $('#arSeg').addEventListener('click',e=>{const b=e.target.closest('[data-ar]');if(b){st.cm.ar=b.dataset.ar;update()}});
 $('#gridSeg').addEventListener('click',e=>{const b=e.target.closest('[data-grid]');if(b){st.cm.grid=b.dataset.grid;update()}});
 $('#reset').onclick=()=>{st=fresh();sel='key';syncUI();update()};
@@ -651,6 +796,7 @@ const MODE={
   rot:{c:'#2f7bff',tip:'끌면 조명이 비추는 방향이 바뀌어요'},
   adj:{c:'#ffd21f',tip:''}
 };
+const CAMTIP={move:'좌우로 끌면 피사체 주위를 돌고, 위아래로 끌면 높이가 바뀌어요 · 핀치/휠: 거리',rot:'끌면 카메라가 향하는 방향이 바뀌어요'};
 const WALLTIP={move:'위로 끌면 멀어지고 아래로 끌면 가까워져요 · 핀치/휠도 돼요',rot:'좌우로 끌면 배경지 각도가 바뀌어요'};
 const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -662,12 +808,41 @@ function setRay(e){
   ndc.set(u*2-1,v*2-1);ray.setFromCamera(ndc,cam);
 }
 wall.userData.k='wall';
+const shown=o=>{for(;o;o=o.parent)if(!o.visible)return false;return true};
 function hitLight(e){ // 조명 > 마네킹/바닥 > 벽 순서로 맞은 대상
-  setRay(e);const objs=[floor,head,body,wall];for(const k of LIGHTS)if(st[k].on)objs.push(L[k].pick,L[k].g);
-  const h=ray.intersectObjects(objs,true)[0];let o=h&&h.object;while(o&&!o.userData.k)o=o.parent;return o?o.userData.k:null;
+  setRay(e);const objs=[floor,head,body,rig,rigStand,wall];if(camObj.visible)objs.push(camModel);for(const k of LIGHTS)if(st[k].on)objs.push(L[k].pick,L[k].g);
+  const h=ray.intersectObjects(objs,true).find(x=>shown(x.object));let o=h&&h.object;while(o&&!o.userData.k)o=o.parent;return o?o.userData.k:null;
 }
-const isWall=()=>pick3==='wall',isMq=()=>pick3==='mq',isLight=()=>LIGHTS.includes(pick3);
-const dragging=()=>pick3&&(mode==='move'||mode==='rot');
+const isCam3=()=>pick3==='cam3',isWall=()=>pick3==='wall',isMq=()=>pick3==='mq',isLight=()=>LIGHTS.includes(pick3);
+let selJ=null,twist=false;
+const poseEditOn=()=>isMq()&&mode==='adj'&&st.mq!=='bust'&&st.mq in MQTYPES;
+const dragging=()=>pick3&&(mode==='move'||mode==='rot'||(poseEditOn()&&!!selJ));
+function hitJoint(e){ // 관절 점 우선, 아니면 탭한 마디가 달린 관절
+  setRay(e);const hs=ray.intersectObjects([rig],true).filter(x=>shown(x.object)&&(x.object.userData.hj||x.object.visible));
+  const h=hs.find(x=>x.object.userData.hj);if(h)return h.object.userData.hj;
+  for(const x of hs){let o=x.object;while(o&&!o.userData.jn)o=o.parent;if(o)return o.userData.jn==='head'?'neck':o.userData.jn}
+  return null;
+}
+const TIP={pelvis:[0,.3,0],spine:'chest',chest:'neck',neck:[0,.12,0],shoulderL:'elbowL',elbowL:'wristL',wristL:[0,-.17,0],shoulderR:'elbowR',elbowR:'wristR',wristR:[0,-.17,0],
+  hipL:'kneeL',kneeL:'ankleL',ankleL:[0,-.035,.18],hipR:'kneeR',kneeR:'ankleR',ankleR:[0,-.035,.18]};
+const boneTip=n=>Array.isArray(TIP[n])?J[n].localToWorld(new THREE.Vector3(...TIP[n])):J[TIP[n]].getWorldPosition(new THREE.Vector3());
+function startJointDrag(e){
+  const j=J[selJ];rig.updateMatrixWorld(true);
+  const P=j.getWorldPosition(new THREE.Vector3()),C=boneTip(selJ),fwd=cam.getWorldDirection(new THREE.Vector3());
+  const plane=new THREE.Plane().setFromNormalAndCoplanarPoint(fwd,C);setRay(e);
+  return{P,C,plane,T0:ray.ray.intersectPlane(plane,new THREE.Vector3())||C.clone(),wq0:j.getWorldQuaternion(new THREE.Quaternion()),
+    pq:j.parent.getWorldQuaternion(new THREE.Quaternion()),y0:((st.pose||{})[selJ]||[0,0,0])[1]};
+}
+function dragJoint(e,dx){ // 마디 끝이 손가락을 따라가도록 관절 회전 (비틀기 모드면 좌우로 비틀기)
+  const d=gs.pj,j=J[selJ];
+  if(twist){const r=[...((st.pose||{})[selJ]||[0,0,0])];r[1]=Math.round(clamp(d.y0+dx*.5,-180,180));st.pose={...st.pose,[selJ]:r};return}
+  setRay(e);const T=ray.ray.intersectPlane(d.plane,new THREE.Vector3());if(!T)return;
+  const a=d.C.clone().sub(d.P).normalize(),b=d.C.clone().add(T.sub(d.T0)).sub(d.P).normalize();
+  const wq=new THREE.Quaternion().setFromUnitVectors(a,b).multiply(d.wq0);
+  j.quaternion.copy(d.pq.clone().invert().multiply(wq));
+  const R=j.rotation;st.pose={...st.pose,[selJ]:[R.x,R.y,R.z].map(v=>Math.round(v/D2R*10)/10)};
+}
+function selectJoint(n){selJ=n;if(n){$('#jointSel').value=n}renderCtx()}
 
 function glow(){
   for(const k of LIGHTS){
@@ -676,34 +851,48 @@ function glow(){
   }
   wallEdge.visible=isWall();wallMat.emissive.set(isWall()?(mode?MODE[mode].c:'#ffffff'):'#000000');wallMat.emissiveIntensity=.03;
   if(isWall())wallEdge.material.color.set(mode?MODE[mode].c:'#ffffff');
-  skinMat.emissive.set(isMq()?MODE.rot.c:'#000000');skinMat.emissiveIntensity=.08;
+  for(const mt of[skinMat,dollMat]){mt.emissive.set(isMq()?(mode?MODE[mode].c:MODE.rot.c):'#000000');mt.emissiveIntensity=.08}
+  camShell.visible=isCam3();if(isCam3())camShell.material.color.set(mode?MODE[mode].c:'#ffffff');
+  const pe=poseEditOn();for(const n in handles){const h=handles[n];h.visible=pe;h.material.color.set(n===selJ?'#ffd21f':'#ffffff');h.scale.setScalar(n===selJ?1.7:1)}
   req();
 }
 function renderCtx(){
   const m=$('#ctx');m.hidden=!pick3;controls.enabled=!dragging()&&!camOn();
   if(!pick3){glow();return}
-  $('#ctxName').textContent=isWall()?'배경지':isMq()?'마네킹':NAME[pick3]+' 조명';
-  for(const b of m.querySelectorAll('[data-m]'))b.hidden=isMq()&&b.dataset.m!=='rot';
+  $('#ctxName').textContent=isCam3()?'카메라':isWall()?'배경지':isMq()?'마네킹':NAME[pick3]+' 조명';
+  for(const b of m.querySelectorAll('[data-m]')){
+    b.hidden=isCam3()&&b.dataset.m==='adj';
+    b.querySelector('.ml').textContent=isMq()?{move:'몸 방향',rot:'고개',adj:'자세'}[b.dataset.m]:{move:'이동',rot:'회전',adj:'조절'}[b.dataset.m];
+  }
   for(const b of m.querySelectorAll('[data-m]'))b.setAttribute('aria-pressed',b.dataset.m===mode);
-  $('#ctxAdj').hidden=mode!=='adj'||!isLight();$('#ctxWall').hidden=mode!=='adj'||!isWall();$('#aimReset').hidden=mode!=='rot';
-  $('#aimReset').textContent=!isLight()?'정면으로 되돌리기':'피사체 쪽으로 다시 겨누기';
-  $('#ctxTip').textContent=!mode?'모드를 골라주세요':isWall()?WALLTIP[mode]||'':isMq()?'좌우로 끌면 얼굴이 돌아가고, 위아래로 끌면 고개를 숙이거나 들어요':MODE[mode].tip;$('#ctxTip').hidden=mode==='adj';
+  $('#ctxAdj').hidden=mode!=='adj'||!isLight();$('#ctxWall').hidden=mode!=='adj'||!isWall();$('#ctxPose').hidden=mode!=='adj'||!isMq();$('#aimReset').hidden=!(mode==='rot'||(isMq()&&mode==='move'));
+  $('#aimReset').textContent=isLight()||isCam3()?'피사체 쪽으로 다시 겨누기':'정면으로 되돌리기';
+  $('#ctxTip').textContent=!mode?'모드를 골라주세요':isCam3()?CAMTIP[mode]:isWall()?WALLTIP[mode]||'':isMq()?{move:'좌우로 끌면 몸 전체가 돌아가요',rot:'좌우로 끌면 얼굴이 돌아가고, 위아래로 끌면 고개를 숙이거나 들어요',adj:''}[mode]:MODE[mode].tip;$('#ctxTip').hidden=mode==='adj';
+  {const pe=poseEditOn();$('#jEdit').hidden=!pe;
+   $('#selJn').textContent=selJ?(JOINTS.find(x=>x[0]===selJ)||[])[1]:'팔다리를 탭하세요';
+   $('#twistBtn').setAttribute('aria-pressed',twist);$('#jReset').disabled=!selJ;
+   $('#jTip').textContent=!selJ?'마디를 탭하거나 흰 점을 탭해 관절을 고르세요':twist?'좌우로 끌면 그 관절이 비틀려요':'끌면 마디 끝이 손가락을 따라가요 · 빈 곳 탭: 선택 해제';}
   syncOutputs();glow();placeCtx();
 }
 function openCtx(k){openQ(false);pick3=k;if(LIGHTS.includes(k)&&sel!==k){sel=k;syncUI()}renderCtx()}
-function closeCtx(){pick3=null;mode=null;renderCtx()}
+function closeCtx(){pick3=null;mode=null;selJ=null;renderCtx()}
 function placeCtx(){
   const m=$('#ctx'),W=view.clientWidth,H=view.clientHeight,w=m.offsetWidth,h=m.offsetHeight;
-  const v=!isLight()?new THREE.Vector3(9,9,9):L[pick3].g.position.clone().project(cam);let x,y;
-  if(v.z>1||Math.abs(v.x)>1||Math.abs(v.y)>1){x=(W-w)/2;y=H-h-34}  // 조명이 화면 밖이면 아래쪽에 고정
+  const v=isCam3()?camObj.position.clone().project(cam):!isLight()?new THREE.Vector3(9,9,9):L[pick3].g.position.clone().project(cam);let x,y;
+  if(isMq()||isWall()){x=8;y=document.querySelector('.hud').offsetHeight+18}  // 마네킹·벽: 왼쪽 위 고정
+  else if(v.z>1||Math.abs(v.x)>1||Math.abs(v.y)>1){x=(W-w)/2;y=H-h-34}  // 조명이 화면 밖이면 아래쪽에 고정
   else{const px=(v.x+1)/2*W,py=(1-v.y)/2*H;x=px+44+w<W?px+44:px-44-w;y=py-h/2}
   m.style.left=clamp(x,8,W-w-8)+'px';m.style.top=clamp(y,56,H-h-30)+'px';
 }
 $('#ctx').addEventListener('click',e=>{
   const b=e.target.closest('[data-m]');
   if(b){mode=mode===b.dataset.m?null:b.dataset.m;renderCtx();return}
+  {let c;if(c=e.target.closest('[data-mqt]')){st.mq=c.dataset.mqt;update();renderCtx();return}
+   if(c=e.target.closest('[data-pose]')){st.pose=clone(POSES[+c.dataset.pose].p);update();renderCtx();return}
+   if(e.target.closest('#twistBtn')){twist=!twist;renderCtx();return}
+   if(e.target.closest('#jReset')&&selJ){st.pose={...st.pose,[selJ]:(POSES[0].p[selJ]||[0,0,0]).slice()};update();renderCtx();return}}
   if(e.target.closest('#ctxClose'))closeCtx();
-  if(e.target.closest('#aimReset')){if(isWall())st.wallA=0;else if(isMq()){st.turn=0;st.tilt=0}else{st[pick3].yaw=0;st[pick3].pitch=0}update()}
+  if(e.target.closest('#aimReset')){if(isCam3()){st.cm.pan=0;st.cm.tilt=0}else if(isWall())st.wallA=0;else if(isMq()){if(mode==='move')st.bodyTurn=0;else{st.turn=0;st.tilt=0}}else{st[pick3].yaw=0;st[pick3].pitch=0}update()}
 });
 $('#ctx').addEventListener('input',e=>{
   if(e.target.id==='w-col'){st.bg=e.target.value;update();return}
@@ -715,6 +904,12 @@ $('#ctx').addEventListener('input',e=>{
 });
 
 // 화면 끌기 방향과 조명 움직임 방향을 맞추기 위한 부호
+function camSign(){ // 카메라 오브젝트를 끄는 방향과 화면상 움직임 방향 맞추기
+  const c=st.cm,save={...c},sx=v=>v.project(cam).x;let a,b;
+  const aim=()=>{const[yw,pt]=camYawPitch();return camPos().add(new THREE.Vector3(Math.sin(yw)*Math.cos(pt),Math.sin(pt),Math.cos(yw)*Math.cos(pt)).multiplyScalar(c.fd))};
+  if(mode==='move'){a=sx(camPos());c.az+=5;b=sx(camPos())}else{a=sx(aim());c.pan+=5;b=sx(aim())}
+  Object.assign(c,save);return b>=a?1:-1;
+}
 function screenSign(){
   const p=st[pick3],q={...p},sx=v=>v.project(cam).x;
   if(mode==='move'){q.az+=5;return sx(lightPos(q))>=sx(lightPos(p))?1:-1}
@@ -727,11 +922,12 @@ view.addEventListener('pointerdown',e=>{
   if(ptrs.size===1){
     gs={id:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now(),moved:false,pinch:0};
     if(camOn()&&!dragging())gs.cam={pan:st.cm.pan,tilt:st.cm.tilt,f:st.cm.f};
-    if(dragging())Object.assign(gs,isMq()?{p:{turn:st.turn,tilt:st.tilt}}:isWall()?{p:{wallD:st.wallD,wallA:st.wallA},sx:cam.position.z>=0?1:-1}:{p:{...st[pick3]},sx:screenSign()});
+    if(dragging()&&poseEditOn())gs.pj=startJointDrag(e);
+    else if(dragging())Object.assign(gs,isCam3()?{p:{...st.cm},sx:camSign()}:isMq()?{p:{turn:st.turn,tilt:st.tilt,bodyTurn:st.bodyTurn||0}}:isWall()?{p:{wallD:st.wallD,wallA:st.wallA},sx:cam.position.z>=0?1:-1}:{p:{...st[pick3]},sx:screenSign()});
   }else if(ptrs.size===2&&gs&&gs.cam){
     const[a,b]=[...ptrs.values()];gs.pinch=Math.hypot(a.x-b.x,a.y-b.y);gs.f0=st.cm.f;gs.moved=true;
   }else if(ptrs.size===2&&gs&&dragging()&&mode==='move'&&!isMq()){
-    const[a,b]=[...ptrs.values()];gs.pinch=Math.hypot(a.x-b.x,a.y-b.y);gs.d=isWall()?st.wallD:st[pick3].d;gs.moved=true;
+    const[a,b]=[...ptrs.values()];gs.pinch=Math.hypot(a.x-b.x,a.y-b.y);gs.d=isCam3()?st.cm.dist:isWall()?st.wallD:st[pick3].d;gs.moved=true;
   }
   if(dragging()||camOn()){e.stopPropagation();e.preventDefault();try{view.setPointerCapture(e.pointerId)}catch(_){}}
 },true);
@@ -746,10 +942,20 @@ view.addEventListener('pointermove',e=>{
     else return;
     update(false);return;
   }
-  if(!dragging()||!gs.p)return;
+  if(!dragging()||!(gs.p||gs.pj))return;
+  if(isCam3()){
+    const c=st.cm;
+    if(ptrs.size>=2&&gs.pinch){const[a,b]=[...ptrs.values()];c.dist=Math.round(clamp(gs.d*gs.pinch/Math.max(Math.hypot(a.x-b.x,a.y-b.y),1),.5,4.5)*20)/20}
+    else if(e.pointerId!==gs.id)return;
+    else if(mode==='move'){c.az=Math.round(wrapA(gs.p.az+gs.sx*dx*.35));c.h=Math.round(clamp(gs.p.h-dy*.005,.3,2.4)*100)/100}
+    else{c.pan=clamp(gs.p.pan+gs.sx*dx*.25,-60,60);c.tilt=clamp(gs.p.tilt-dy*.25,-45,45)}
+    update(false);return;
+  }
   if(isMq()){
     if(e.pointerId!==gs.id)return;
-    st.turn=Math.round(clamp(gs.p.turn+dx*.4,-90,90));st.tilt=Math.round(clamp(gs.p.tilt+dy*.2,-25,25));
+    if(mode==='adj'){if(gs.pj)dragJoint(e,dx);update(false);return}
+    if(mode==='move')st.bodyTurn=Math.round(wrapA(gs.p.bodyTurn+dx*.4));
+    else{st.turn=Math.round(clamp(gs.p.turn+dx*.4,-90,90));st.tilt=Math.round(clamp(gs.p.tilt+dy*.2,-25,25))}
     update(false);return;
   }
   if(isWall()){
@@ -773,8 +979,11 @@ function endPtr(e,cancel){
   if(e.pointerId!==gs.id){gs.pinch=0;return}
   const tap=!cancel&&!gs.moved&&performance.now()-gs.t<600;
   if(tap){
-    const k=hitLight(e);
-    if(k&&k!=='wall')openCtx(k);                  // 조명
+    const jn=poseEditOn()?hitJoint(e):null;
+    const k=jn?null:hitLight(e);
+    if(jn)selectJoint(jn);                        // 자세 모드: 관절 고르기
+    else if(poseEditOn()&&selJ&&!(k&&k!=='wall'))selectJoint(null); // 빈 곳 탭 → 관절 선택 해제
+    else if(k&&k!=='wall')openCtx(k);             // 조명
     else if(pick3)closeCtx();                     // 그 외 탭 → 닫기
     else if(camOn())focusAt(e);                   // 카메라 모드: 탭한 곳에 초점
   }
@@ -784,7 +993,7 @@ function endPtr(e,cancel){
 view.addEventListener('pointerup',e=>endPtr(e,false),true);
 view.addEventListener('pointercancel',e=>endPtr(e,true),true);
 function focusAt(e){
-  setRay(e);const h=ray.intersectObjects([head,body,wall,floor],true)[0];if(!h)return;
+  setRay(e);const h=ray.intersectObjects([head,body,rig,rigStand,wall,floor],true).find(x=>shown(x.object));if(!h)return;
   const fwd=new THREE.Vector3();cam.getWorldDirection(fwd);
   st.cm.fd=Math.round(clamp(h.point.clone().sub(cam.position).dot(fwd),.3,6)*100)/100;st.cm.af=false;
   const r=view.getBoundingClientRect(),fb=$('#focusBox');fb.style.left=(e.clientX-r.left)+'px';fb.style.top=(e.clientY-r.top)+'px';fb.hidden=false;
@@ -797,11 +1006,97 @@ view.addEventListener('wheel',e=>{ // 카메라 모드 휠 → 줌
 },{capture:true,passive:false});
 view.addEventListener('wheel',e=>{ // 이동 모드에서 휠 → 조명 거리
   if(!(pick3&&mode==='move')||isMq())return;
-  e.preventDefault();e.stopPropagation();const f=1+e.deltaY*.001;if(isWall())st.wallD=clampW(st.wallD*f);else st[pick3].d=clampD(st[pick3].d*f);update();
+  e.preventDefault();e.stopPropagation();const f=1+e.deltaY*.001;if(isCam3())st.cm.dist=Math.round(clamp(st.cm.dist*f,.5,4.5)*20)/20;else if(isWall())st.wallD=clampW(st.wallD*f);else st[pick3].d=clampD(st[pick3].d*f);update();
 },{capture:true,passive:false});
 $('#tabs').addEventListener('click',()=>{if(isLight()&&pick3!==sel){pick3=sel;renderCtx()}});
 
-setCamMode(st.cm.on);syncUI();update(false);ratio();
+/* ---------- 카메라 위치 저장 ---------- */
+const SKEY='litesim-cams',CAM_KEYS=['az','dist','h','pan','tilt','f','Ni','fd','af'];
+const pickCam=o=>Object.fromEntries(CAM_KEYS.map(k=>[k,o[k]]));
+let saves=[];try{saves=JSON.parse(localStorage.getItem(SKEY)||'[]')||[]}catch(e){}
+const storeSaves=()=>{try{localStorage.setItem(SKEY,JSON.stringify(saves))}catch(e){}};
+function drawSaves(){
+  $('#saves').innerHTML=saves.length?saves.map((s,i)=>`<span class="save"><button class="load" data-i="${i}">위치 ${s.n}<small>${s.cm.f}mm</small></button><button class="del" data-del="${i}" aria-label="위치 ${s.n} 삭제">✕</button></span>`).join(''):'<span class="empty">저장된 위치가 없어요</span>';
+}
+function loadCam(c){Object.assign(st.cm,c);if(!camOn())setCamMode(true);else update()}
+$('#saveCam').onclick=()=>{saves.push({n:Math.max(0,...saves.map(s=>s.n))+1,cm:pickCam(st.cm)});storeSaves();drawSaves();$('#saves').scrollLeft=1e6};
+$('#saves').addEventListener('click',e=>{
+  const d=e.target.closest('[data-del]');if(d){saves.splice(+d.dataset.del,1);storeSaves();drawSaves();return}
+  const l=e.target.closest('[data-i]');if(l)loadCam(saves[+l.dataset.i].cm);
+});
+$('#homeCam').onclick=()=>loadCam(pickCam(GBASE.cm));
+drawSaves();
+
+/* ---------- 링크 공유: 조절 가능한 상태 전체(st)를 압축해 주소 #뒤에 ----------
+   st 안에 있는 값은 전부 들어가요. 새 기능(예: 데생 인형)도 st에 상태를 두면 자동으로 공유돼요.
+   claude.ai 안에서는 #뒤에 영문·숫자·하이픈만 쓸 수 있어서 base32(소문자+숫자)로 적어요. */
+const ARTIFACT_URL='https://claude.ai/artifact/9ghbGBqLFbvfeEGQwQuP8c';
+const B32='abcdefghijklmnopqrstuvwxyz234567';
+function b32enc(u8){let o='',v=0,n=0;for(const b of u8){v=(v<<8)|b;n+=8;while(n>=5){o+=B32[(v>>>(n-5))&31];n-=5}v&=255}if(n)o+=B32[(v<<(5-n))&31];return o}
+function b32dec(str){const o=[];let v=0,n=0;for(const ch of str){const i=B32.indexOf(ch);if(i<0)throw new Error('bad');v=(v<<5)|i;n+=5;if(n>=8){o.push((v>>>(n-8))&255);n-=8}v&=255}return new Uint8Array(o)}
+const canZip=typeof CompressionStream==='function'&&typeof DecompressionStream==='function';
+const pipe=async(u8,T)=>new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(T)).arrayBuffer());
+async function encodeState(){
+  const json=JSON.stringify(st,(k,v)=>typeof v==='number'?Math.round(v*1000)/1000:v),u8=new TextEncoder().encode(json);
+  return canZip?'v1-'+b32enc(await pipe(u8,new CompressionStream('deflate-raw'))):'v0-'+b32enc(u8);
+}
+async function decodeState(code){
+  const m=/^(v[01])-([a-z2-7]+)$/.exec(code);if(!m)return null;
+  let u8=b32dec(m[2]);if(m[1]==='v1'){if(!canZip)throw new Error('zip');u8=await pipe(u8,new DecompressionStream('deflate-raw'))}
+  return JSON.parse(new TextDecoder().decode(u8));
+}
+let shareCode='';const refreshShare=()=>encodeState().then(c=>shareCode=c).catch(()=>{});
+{const sv0=save;save=()=>{sv0();refreshShare()}}
+function dlg(title,msg,opt={}){
+  $('#dlgT').textContent=title;$('#dlgMsg').textContent=msg;
+  const i=$('#dlgIn'),im=$('#dlgImg');i.hidden=!opt.text;i.value=opt.text||'';im.hidden=!opt.img;if(opt.img)im.src=opt.img;
+  $('#dlgCopy').hidden=!opt.text;$('#dlg').hidden=false;if(opt.text){i.focus();i.select()}
+}
+$('#dlgClose').onclick=()=>{$('#dlg').hidden=true;const im=$('#dlgImg');if(im.src.startsWith('blob:'))URL.revokeObjectURL(im.src);im.removeAttribute('src')};
+$('#dlg').addEventListener('click',e=>{if(e.target.id==='dlg')$('#dlgClose').click()});
+async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch(e){return false}}
+$('#dlgCopy').onclick=async()=>{const ok=await copyText($('#dlgIn').value);$('#dlgMsg').textContent=ok?'복사했어요.':'복사가 막혔어요. 위 칸을 길게 눌러(또는 Ctrl+C) 직접 복사해 주세요.'};
+$('#shareBtn').onclick=async()=>{
+  const code=shareCode||await encodeState();shareCode=code;
+  const base=window.top!==window?ARTIFACT_URL:location.origin+location.pathname,link=base+'#'+code;
+  try{location.hash=code}catch(e){}
+  const ok=await copyText(link);
+  dlg('링크 공유',(ok?'링크를 복사했어요. ':'')+'조명·카메라·벽·마네킹 설정이 모두 담겨 있어요. 받는 사람도 이 페이지를 볼 수 있어야 열려요(공유 설정 필요).',{text:link});
+};
+async function applyHash(){
+  const code=location.hash.slice(1);if(!/^v[01]-/.test(code))return;
+  try{const sv=await decodeState(code);if(!sv)return;st=mergeState(sv);if(pick3)closeCtx();openQ(false);setCamMode(st.cm.on);syncUI();update()}
+  catch(e){dlg('링크를 열지 못했어요','링크가 잘렸거나 이 브라우저가 압축 해제를 지원하지 않아요.')}
+}
+window.addEventListener('hashchange',applyHash);
+
+/* ---------- 사진 저장: 카메라 구도(프레임 안)만, 다듬기가 끝난 화면으로 ---------- */
+let dlCap=null;
+if(window.claude&&claude.use)claude.use('downloads').then(d=>dlCap=d).catch(()=>{});
+let photoWait=false;
+$('#photoBtn').onclick=async()=>{
+  const btn=$('#photoBtn');if(photoWait){photoWait=false;btn.textContent='사진 저장';return}
+  if(pick3)closeCtx();openQ(false);if(!camOn())setCamMode(true);
+  photoWait=true;
+  // 사진은 고해상도로: 프레임 긴 변이 약 2000px 되도록 잠시 해상도를 올려서 다시 다듬기
+  const pr0=renderer.getPixelRatio(),fr0=frameRect(),want=Math.min(3,Math.max(pr0,2000/Math.max(fr0.w,fr0.h)));
+  if(want>pr0+.01){renderer.setPixelRatio(want);resize();rk=0}
+  const restore=()=>{if(renderer.getPixelRatio()!==pr0){renderer.setPixelRatio(pr0);resize()}};
+  while(photoWait&&rk<RN){btn.textContent=`다듬는 중 ${Math.round(rk/RN*100)}% (취소)`;await new Promise(r=>setTimeout(r,120))}
+  btn.textContent='사진 저장';if(!photoWait)return restore();photoWait=false;
+  showTex(rtA.texture); // 완성된 화면을 다시 그리고 바로 잘라내기
+  const c=renderer.domElement,fr=frameRect(),k=c.width/fr.W,out=document.createElement('canvas');
+  out.width=Math.round(fr.w*k);out.height=Math.round(fr.h*k);
+  out.getContext('2d').drawImage(c,fr.x*k,fr.y*k,fr.w*k,fr.h*k,0,0,out.width,out.height);
+  restore();
+  const blob=await new Promise(r=>out.toBlob(r,'image/jpeg',.92));
+  const d=new Date(),z=n=>String(n).padStart(2,'0'),name=`lighting-${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}${z(d.getSeconds())}.jpg`;
+  if(dlCap){try{await dlCap.save({filename:name,data:blob});return}catch(e){if(e&&e.code==='declined')return}}
+  if(window.top===window){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);return}
+  dlg('사진','여기서는 바로 저장이 안 돼요. 사진을 길게 누르거나 오른쪽 클릭해서 저장해 주세요.',{img:URL.createObjectURL(blob)});
+};
+
+setCamMode(st.cm.on);syncUI();update(false);ratio();refreshShare();applyHash();
 }
 </script>
 </body>
