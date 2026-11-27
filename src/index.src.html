@@ -25,10 +25,19 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans
 .view{position:relative;background:#2b2b2d;overflow:hidden;flex:1;min-height:0}
 .cambar{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#1d1d1f;color:#eee;border-top:1px solid #333}
 .cambar button{border:1px solid rgba(255,255,255,.22);background:transparent;border-radius:999px;min-height:40px;padding:0 12px;font-size:13px;white-space:nowrap;color:#eee}
-#saveCam{background:#2457e6;border-color:#2457e6;flex:none}#homeCam{flex:none}
+#saveCam{background:#2457e6;border-color:#2457e6;flex:none}#homeCam,#shareBtn,#photoBtn{flex:none}
 .saves{display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0}
 .save{display:flex;align-items:center;border:1px solid rgba(255,255,255,.22);border-radius:999px;flex:none}
 .cambar .save button{border:0;border-radius:999px}.save .load{padding:0 4px 0 12px}.save .load small{color:#a9a9b0;margin-left:4px}.save .del{padding:0 12px;color:#a9a9b0}
+.dlg{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:16px}
+.dlg[hidden]{display:none}
+.dlg-box{width:min(460px,100%);max-height:90vh;overflow:auto;background:#1d1d1f;color:#eee;border-radius:14px;padding:14px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.dlg-box .ctx-h button{border:0;background:rgba(255,255,255,.12);border-radius:8px;width:36px;height:36px;color:#eee}
+.dlg-msg{font-size:14px;margin:4px 0 10px;color:#d6d6db}
+.dlg-in{width:100%;font:13px/1.4 inherit;padding:10px;border-radius:8px;border:1px solid #444;background:#111;color:#eee}
+.dlg-img{display:block;max-width:100%;max-height:60vh;margin:0 auto;border-radius:6px}
+.dlg-act{display:flex;justify-content:flex-end;margin-top:10px}.dlg-act button{border:0;background:#2457e6;color:#fff;border-radius:999px;min-height:40px;padding:0 16px}
+.dlg-act button[hidden]{display:none}
 .saves .empty{font-size:12px;color:#8d8d94}
 .view canvas{display:block;width:100%;height:100%;touch-action:none}
 .hud{position:absolute;left:12px;right:12px;top:12px;display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;pointer-events:none}
@@ -159,6 +168,8 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
     <button id="saveCam">＋ 현재 카메라 저장</button>
     <div class="saves" id="saves"></div>
     <button id="homeCam">초기 위치</button>
+    <button id="shareBtn">링크 공유</button>
+    <button id="photoBtn">사진 저장</button>
   </div>
   </div>
   <aside class="panel">
@@ -196,6 +207,13 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
   </aside>
 </div>
 
+<div class="dlg" id="dlg" hidden><div class="dlg-box" role="dialog" aria-modal="true" aria-labelledby="dlgT">
+  <div class="ctx-h"><b id="dlgT"></b><button id="dlgClose" aria-label="닫기">✕</button></div>
+  <p class="dlg-msg" id="dlgMsg"></p>
+  <input class="dlg-in" id="dlgIn" readonly hidden>
+  <img class="dlg-img" id="dlgImg" alt="저장할 사진" hidden>
+  <div class="dlg-act"><button id="dlgCopy" hidden>다시 복사</button></div>
+</div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -272,9 +290,16 @@ const CAMCTRL=[
 const clone=o=>JSON.parse(JSON.stringify(o));
 function fresh(){const s={...clone(GBASE)};for(const k of LIGHTS)s[k]=clone(BASE[k]);return s}
 let st=fresh();
-try{const sv=JSON.parse(localStorage.getItem('litesim1')||'null');if(sv&&sv.key&&sv.fill&&sv.rim)st={...st,...sv,cm:{...st.cm,...(sv.cm||{})}}}catch(e){}
+// 저장된 값을 기본값 위에 덮기. 새 항목이 생겨도 기본값이 채워지도록 항목별로 병합
+function mergeState(sv){
+  const b=fresh();if(!sv||typeof sv!=='object')return b;
+  const o={...b,...sv,cm:{...b.cm,...(sv.cm||{})}};
+  for(const k of LIGHTS)o[k]={...b[k],...(sv[k]||{})};
+  return o;
+}
+try{const sv=JSON.parse(localStorage.getItem('litesim1')||'null');if(sv&&sv.key&&sv.fill&&sv.rim)st=mergeState(sv)}catch(e){}
 let sel='key',pick3=null,mode=null;
-const save=()=>{try{localStorage.setItem('litesim1',JSON.stringify(st))}catch(e){}};
+let save=()=>{try{localStorage.setItem('litesim1',JSON.stringify(st))}catch(e){}};
 
 const sizeM=s=>0.12+s/100*0.9;
 const sizeName=s=>s<15?'맨 플래시':s<40?'소형 소프트박스':s<70?'중형 소프트박스':'대형 옥타';
@@ -870,7 +895,76 @@ $('#saves').addEventListener('click',e=>{
 $('#homeCam').onclick=()=>loadCam(pickCam(GBASE.cm));
 drawSaves();
 
-setCamMode(st.cm.on);syncUI();update(false);ratio();
+/* ---------- 링크 공유: 조절 가능한 상태 전체(st)를 압축해 주소 #뒤에 ----------
+   st 안에 있는 값은 전부 들어가요. 새 기능(예: 데생 인형)도 st에 상태를 두면 자동으로 공유돼요.
+   claude.ai 안에서는 #뒤에 영문·숫자·하이픈만 쓸 수 있어서 base32(소문자+숫자)로 적어요. */
+const ARTIFACT_URL='https://claude.ai/artifact/9ghbGBqLFbvfeEGQwQuP8c';
+const B32='abcdefghijklmnopqrstuvwxyz234567';
+function b32enc(u8){let o='',v=0,n=0;for(const b of u8){v=(v<<8)|b;n+=8;while(n>=5){o+=B32[(v>>>(n-5))&31];n-=5}v&=255}if(n)o+=B32[(v<<(5-n))&31];return o}
+function b32dec(str){const o=[];let v=0,n=0;for(const ch of str){const i=B32.indexOf(ch);if(i<0)throw new Error('bad');v=(v<<5)|i;n+=5;if(n>=8){o.push((v>>>(n-8))&255);n-=8}v&=255}return new Uint8Array(o)}
+const canZip=typeof CompressionStream==='function'&&typeof DecompressionStream==='function';
+const pipe=async(u8,T)=>new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(T)).arrayBuffer());
+async function encodeState(){
+  const json=JSON.stringify(st,(k,v)=>typeof v==='number'?Math.round(v*1000)/1000:v),u8=new TextEncoder().encode(json);
+  return canZip?'v1-'+b32enc(await pipe(u8,new CompressionStream('deflate-raw'))):'v0-'+b32enc(u8);
+}
+async function decodeState(code){
+  const m=/^(v[01])-([a-z2-7]+)$/.exec(code);if(!m)return null;
+  let u8=b32dec(m[2]);if(m[1]==='v1'){if(!canZip)throw new Error('zip');u8=await pipe(u8,new DecompressionStream('deflate-raw'))}
+  return JSON.parse(new TextDecoder().decode(u8));
+}
+let shareCode='';const refreshShare=()=>encodeState().then(c=>shareCode=c).catch(()=>{});
+{const sv0=save;save=()=>{sv0();refreshShare()}}
+function dlg(title,msg,opt={}){
+  $('#dlgT').textContent=title;$('#dlgMsg').textContent=msg;
+  const i=$('#dlgIn'),im=$('#dlgImg');i.hidden=!opt.text;i.value=opt.text||'';im.hidden=!opt.img;if(opt.img)im.src=opt.img;
+  $('#dlgCopy').hidden=!opt.text;$('#dlg').hidden=false;if(opt.text){i.focus();i.select()}
+}
+$('#dlgClose').onclick=()=>{$('#dlg').hidden=true;const im=$('#dlgImg');if(im.src.startsWith('blob:'))URL.revokeObjectURL(im.src);im.removeAttribute('src')};
+$('#dlg').addEventListener('click',e=>{if(e.target.id==='dlg')$('#dlgClose').click()});
+async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch(e){return false}}
+$('#dlgCopy').onclick=async()=>{const ok=await copyText($('#dlgIn').value);$('#dlgMsg').textContent=ok?'복사했어요.':'복사가 막혔어요. 위 칸을 길게 눌러(또는 Ctrl+C) 직접 복사해 주세요.'};
+$('#shareBtn').onclick=async()=>{
+  const code=shareCode||await encodeState();shareCode=code;
+  const base=window.top!==window?ARTIFACT_URL:location.origin+location.pathname,link=base+'#'+code;
+  try{location.hash=code}catch(e){}
+  const ok=await copyText(link);
+  dlg('링크 공유',(ok?'링크를 복사했어요. ':'')+'조명·카메라·벽·마네킹 설정이 모두 담겨 있어요. 받는 사람도 이 페이지를 볼 수 있어야 열려요(공유 설정 필요).',{text:link});
+};
+async function applyHash(){
+  const code=location.hash.slice(1);if(!/^v[01]-/.test(code))return;
+  try{const sv=await decodeState(code);if(!sv)return;st=mergeState(sv);if(pick3)closeCtx();openQ(false);setCamMode(st.cm.on);syncUI();update()}
+  catch(e){dlg('링크를 열지 못했어요','링크가 잘렸거나 이 브라우저가 압축 해제를 지원하지 않아요.')}
+}
+window.addEventListener('hashchange',applyHash);
+
+/* ---------- 사진 저장: 카메라 구도(프레임 안)만, 다듬기가 끝난 화면으로 ---------- */
+let dlCap=null;
+if(window.claude&&claude.use)claude.use('downloads').then(d=>dlCap=d).catch(()=>{});
+let photoWait=false;
+$('#photoBtn').onclick=async()=>{
+  const btn=$('#photoBtn');if(photoWait){photoWait=false;btn.textContent='사진 저장';return}
+  if(pick3)closeCtx();openQ(false);if(!camOn())setCamMode(true);
+  photoWait=true;
+  // 사진은 고해상도로: 프레임 긴 변이 약 2000px 되도록 잠시 해상도를 올려서 다시 다듬기
+  const pr0=renderer.getPixelRatio(),fr0=frameRect(),want=Math.min(3,Math.max(pr0,2000/Math.max(fr0.w,fr0.h)));
+  if(want>pr0+.01){renderer.setPixelRatio(want);resize();rk=0}
+  const restore=()=>{if(renderer.getPixelRatio()!==pr0){renderer.setPixelRatio(pr0);resize()}};
+  while(photoWait&&rk<RN){btn.textContent=`다듬는 중 ${Math.round(rk/RN*100)}% (취소)`;await new Promise(r=>setTimeout(r,120))}
+  btn.textContent='사진 저장';if(!photoWait)return restore();photoWait=false;
+  showTex(rtA.texture); // 완성된 화면을 다시 그리고 바로 잘라내기
+  const c=renderer.domElement,fr=frameRect(),k=c.width/fr.W,out=document.createElement('canvas');
+  out.width=Math.round(fr.w*k);out.height=Math.round(fr.h*k);
+  out.getContext('2d').drawImage(c,fr.x*k,fr.y*k,fr.w*k,fr.h*k,0,0,out.width,out.height);
+  restore();
+  const blob=await new Promise(r=>out.toBlob(r,'image/jpeg',.92));
+  const d=new Date(),z=n=>String(n).padStart(2,'0'),name=`lighting-${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}${z(d.getSeconds())}.jpg`;
+  if(dlCap){try{await dlCap.save({filename:name,data:blob});return}catch(e){if(e&&e.code==='declined')return}}
+  if(window.top===window){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);return}
+  dlg('사진','여기서는 바로 저장이 안 돼요. 사진을 길게 누르거나 오른쪽 클릭해서 저장해 주세요.',{img:URL.createObjectURL(blob)});
+};
+
+setCamMode(st.cm.on);syncUI();update(false);ratio();refreshShare();applyHash();
 }
 </script>
 </body>
