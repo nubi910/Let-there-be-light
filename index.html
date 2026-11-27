@@ -54,6 +54,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .caminfo{position:absolute;transform:translate(-50%,-100%);font-size:12px;padding:4px 10px;pointer-events:none}
 .caminfo[hidden],.focusbox[hidden]{display:none}
 .focusbox{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border:2px solid #ffd21f;border-radius:4px;pointer-events:none}
+.fold summary{cursor:pointer;font-size:13px;color:#e6e6ea;min-height:32px;display:flex;align-items:center}
 .qcam{width:272px;max-height:calc(100% - 70px);overflow:auto}
 .q-l{display:flex;justify-content:space-between;font-size:13px;margin:10px 0 4px;color:#e6e6ea}.q-l output{color:#c9c9cf;font-variant-numeric:tabular-nums}
 .chips{display:flex;flex-wrap:wrap;gap:4px}
@@ -157,7 +158,10 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
       </div>
       <p class="ctx-tip" id="ctxTip"></p>
       <button class="ctx-sub" id="aimReset" hidden>피사체 쪽으로 다시 겨누기</button>
-      <div id="ctxPose" hidden><div class="q-l"><span>종류</span></div><div class="chips" id="cMqType"></div><div class="q-l"><span>자세</span></div><div class="chips" id="cPose"></div></div>
+      <div id="ctxPose" hidden><details class="fold"><summary>종류 · 자세 프리셋</summary><div class="q-l"><span>종류</span></div><div class="chips" id="cMqType"></div><div class="q-l"><span>자세</span></div><div class="chips" id="cPose"></div></details>
+        <div id="jEdit"><div class="q-l"><span>관절</span><output id="selJn">팔다리를 탭하세요</output></div>
+        <div class="chips"><button id="twistBtn" aria-pressed="false">비틀기</button><button id="jReset">이 관절 초기화</button></div>
+        <p class="ctx-tip" id="jTip"></p></div></div>
       <div id="ctxWall" hidden><div class="line"><span>배경지 색</span><input type="color" id="w-col"></div></div>
       <div id="ctxAdj" hidden>
         <label class="row"><span>세기</span><output id="oa-pow"></output><input type="range" id="a-pow" min="0" max="100" step="1"></label>
@@ -198,7 +202,7 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
     <div class="line" style="margin:4px 0 0;min-height:0"><span>자세</span></div><div class="seg" id="poseSeg"></div>
     <div class="line"><span>관절</span><select id="jointSel" class="sel"></select></div>
     <div id="jointCtrls"></div>
-    <p class="note" id="poseNote">왼쪽·오른쪽은 인형 기준이에요. 흉상은 자세를 바꿀 수 없어요. 얼굴 방향·고개·몸 방향은 아래 "전체"에 있어요.</p>
+    <p class="note" id="poseNote">왼쪽·오른쪽은 인형 기준이에요. 3D 화면의 마네킹 메뉴 → 자세에서 팔다리를 직접 잡아 움직일 수도 있어요. 흉상은 자세를 바꿀 수 없어요. 얼굴 방향·고개·몸 방향은 아래 "전체"에 있어요.</p>
 
     <h2>카메라</h2>
     <div class="line" style="margin:4px 0 0;min-height:0"><span>화면비</span></div><div class="seg" id="arSeg"></div>
@@ -420,7 +424,7 @@ const dollMat=new THREE.MeshStandardMaterial({color:0xd8cdc2,roughness:.6}); // 
     ['hipL','pelvis',.095,.9,0],['kneeL','hipL',.095,.47,0],['ankleL','kneeL',.095,.07,0],
     ['hipR','pelvis',-.095,.9,0],['kneeR','hipR',-.095,.47,0],['ankleR','kneeR',-.095,.07,0]];
   const abs={};
-  for(const[n,par,x,y,z]of R){const j=new THREE.Group(),pa=par?abs[par]:[0,0,0];j.position.set(x-pa[0],y-pa[1],z-pa[2]);j.rotation.order='YXZ';(par?J[par]:rig).add(j);J[n]=j;abs[n]=[x,y,z]}
+  for(const[n,par,x,y,z]of R){const j=new THREE.Group(),pa=par?abs[par]:[0,0,0];j.userData.jn=n;j.position.set(x-pa[0],y-pa[1],z-pa[2]);j.rotation.order='YXZ';(par?J[par]:rig).add(j);J[n]=j;abs[n]=[x,y,z]}
   const seg=(n,rx,ry,rz,oy,oz=0)=>{const m=new THREE.Mesh(SPH,dollMat);m.scale.set(rx,ry,rz);m.position.set(0,oy,oz);m.castShadow=m.receiveShadow=true;J[n].add(m);return m};
   seg('pelvis',.165,.1,.11,-.02);seg('spine',.125,.1,.09,.07);seg('chest',.18,.13,.11,.09);seg('chest',.13,.07,.09,.17);seg('neck',.056,.07,.064,.02,-.02);
   for(const s of'LR'){
@@ -430,6 +434,9 @@ const dollMat=new THREE.MeshStandardMaterial({color:0xd8cdc2,roughness:.6}); // 
     seg('ankle'+s,.035,.035,.035,0);seg('ankle'+s,.045,.035,.12,-.035,.06);
   }
 }
+const handles={}; // 자세 모드에서만 보이는 관절 점 (몸에 가려지지 않게 맨 위에 그림)
+for(const[n]of JOINTS){const h=new THREE.Mesh(new THREE.SphereGeometry(.022,12,8),new THREE.MeshBasicMaterial({color:0xffffff,depthTest:false,transparent:true,opacity:.9,toneMapped:false}));
+  h.renderOrder=999;h.visible=false;h.userData.hj=n;J[n].add(h);handles[n]=h}
 const rigStand=new THREE.Group();scene.add(rigStand);
 {const p=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,.86,12),darkMat);p.position.y=.43;p.castShadow=true;rigStand.add(p);
  const f=new THREE.Mesh(new THREE.CylinderGeometry(.18,.2,.03,32),darkMat);f.position.y=.015;f.receiveShadow=true;rigStand.add(f);}
@@ -809,7 +816,35 @@ function hitLight(e){ // 조명 > 마네킹/바닥 > 벽 순서로 맞은 대상
   const h=ray.intersectObjects(objs,true).find(x=>shown(x.object));let o=h&&h.object;while(o&&!o.userData.k)o=o.parent;return o?o.userData.k:null;
 }
 const isCam3=()=>pick3==='cam3',isWall=()=>pick3==='wall',isMq=()=>pick3==='mq',isLight=()=>LIGHTS.includes(pick3);
-const dragging=()=>pick3&&(mode==='move'||mode==='rot');
+let selJ=null,twist=false;
+const poseEditOn=()=>isMq()&&mode==='adj'&&st.mq!=='bust'&&st.mq in MQTYPES;
+const dragging=()=>pick3&&(mode==='move'||mode==='rot'||(poseEditOn()&&!!selJ));
+function hitJoint(e){ // 관절 점 우선, 아니면 탭한 마디가 달린 관절
+  setRay(e);const hs=ray.intersectObjects([rig],true).filter(x=>shown(x.object)&&(x.object.userData.hj||x.object.visible));
+  const h=hs.find(x=>x.object.userData.hj);if(h)return h.object.userData.hj;
+  for(const x of hs){let o=x.object;while(o&&!o.userData.jn)o=o.parent;if(o)return o.userData.jn==='head'?'neck':o.userData.jn}
+  return null;
+}
+const TIP={pelvis:[0,.3,0],spine:'chest',chest:'neck',neck:[0,.12,0],shoulderL:'elbowL',elbowL:'wristL',wristL:[0,-.17,0],shoulderR:'elbowR',elbowR:'wristR',wristR:[0,-.17,0],
+  hipL:'kneeL',kneeL:'ankleL',ankleL:[0,-.035,.18],hipR:'kneeR',kneeR:'ankleR',ankleR:[0,-.035,.18]};
+const boneTip=n=>Array.isArray(TIP[n])?J[n].localToWorld(new THREE.Vector3(...TIP[n])):J[TIP[n]].getWorldPosition(new THREE.Vector3());
+function startJointDrag(e){
+  const j=J[selJ];rig.updateMatrixWorld(true);
+  const P=j.getWorldPosition(new THREE.Vector3()),C=boneTip(selJ),fwd=cam.getWorldDirection(new THREE.Vector3());
+  const plane=new THREE.Plane().setFromNormalAndCoplanarPoint(fwd,C);setRay(e);
+  return{P,C,plane,T0:ray.ray.intersectPlane(plane,new THREE.Vector3())||C.clone(),wq0:j.getWorldQuaternion(new THREE.Quaternion()),
+    pq:j.parent.getWorldQuaternion(new THREE.Quaternion()),y0:((st.pose||{})[selJ]||[0,0,0])[1]};
+}
+function dragJoint(e,dx){ // 마디 끝이 손가락을 따라가도록 관절 회전 (비틀기 모드면 좌우로 비틀기)
+  const d=gs.pj,j=J[selJ];
+  if(twist){const r=[...((st.pose||{})[selJ]||[0,0,0])];r[1]=Math.round(clamp(d.y0+dx*.5,-180,180));st.pose={...st.pose,[selJ]:r};return}
+  setRay(e);const T=ray.ray.intersectPlane(d.plane,new THREE.Vector3());if(!T)return;
+  const a=d.C.clone().sub(d.P).normalize(),b=d.C.clone().add(T.sub(d.T0)).sub(d.P).normalize();
+  const wq=new THREE.Quaternion().setFromUnitVectors(a,b).multiply(d.wq0);
+  j.quaternion.copy(d.pq.clone().invert().multiply(wq));
+  const R=j.rotation;st.pose={...st.pose,[selJ]:[R.x,R.y,R.z].map(v=>Math.round(v/D2R*10)/10)};
+}
+function selectJoint(n){selJ=n;if(n){$('#jointSel').value=n}renderCtx()}
 
 function glow(){
   for(const k of LIGHTS){
@@ -820,6 +855,7 @@ function glow(){
   if(isWall())wallEdge.material.color.set(mode?MODE[mode].c:'#ffffff');
   for(const mt of[skinMat,dollMat]){mt.emissive.set(isMq()?(mode?MODE[mode].c:MODE.rot.c):'#000000');mt.emissiveIntensity=.08}
   camShell.visible=isCam3();if(isCam3())camShell.material.color.set(mode?MODE[mode].c:'#ffffff');
+  const pe=poseEditOn();for(const n in handles){const h=handles[n];h.visible=pe;h.material.color.set(n===selJ?'#ffd21f':'#ffffff');h.scale.setScalar(n===selJ?1.7:1)}
   req();
 }
 function renderCtx(){
@@ -834,14 +870,19 @@ function renderCtx(){
   $('#ctxAdj').hidden=mode!=='adj'||!isLight();$('#ctxWall').hidden=mode!=='adj'||!isWall();$('#ctxPose').hidden=mode!=='adj'||!isMq();$('#aimReset').hidden=!(mode==='rot'||(isMq()&&mode==='move'));
   $('#aimReset').textContent=isLight()||isCam3()?'피사체 쪽으로 다시 겨누기':'정면으로 되돌리기';
   $('#ctxTip').textContent=!mode?'모드를 골라주세요':isCam3()?CAMTIP[mode]:isWall()?WALLTIP[mode]||'':isMq()?{move:'좌우로 끌면 몸 전체가 돌아가요',rot:'좌우로 끌면 얼굴이 돌아가고, 위아래로 끌면 고개를 숙이거나 들어요',adj:''}[mode]:MODE[mode].tip;$('#ctxTip').hidden=mode==='adj';
+  {const pe=poseEditOn();$('#jEdit').hidden=!pe;
+   $('#selJn').textContent=selJ?(JOINTS.find(x=>x[0]===selJ)||[])[1]:'팔다리를 탭하세요';
+   $('#twistBtn').setAttribute('aria-pressed',twist);$('#jReset').disabled=!selJ;
+   $('#jTip').textContent=!selJ?'마디를 탭하거나 흰 점을 탭해 관절을 고르세요':twist?'좌우로 끌면 그 관절이 비틀려요':'끌면 마디 끝이 손가락을 따라가요 · 빈 곳 탭: 선택 해제';}
   syncOutputs();glow();placeCtx();
 }
 function openCtx(k){openQ(false);pick3=k;if(LIGHTS.includes(k)&&sel!==k){sel=k;syncUI()}renderCtx()}
-function closeCtx(){pick3=null;mode=null;renderCtx()}
+function closeCtx(){pick3=null;mode=null;selJ=null;renderCtx()}
 function placeCtx(){
   const m=$('#ctx'),W=view.clientWidth,H=view.clientHeight,w=m.offsetWidth,h=m.offsetHeight;
   const v=isCam3()?camObj.position.clone().project(cam):!isLight()?new THREE.Vector3(9,9,9):L[pick3].g.position.clone().project(cam);let x,y;
-  if(v.z>1||Math.abs(v.x)>1||Math.abs(v.y)>1){x=(W-w)/2;y=H-h-34}  // 조명이 화면 밖이면 아래쪽에 고정
+  if(isMq()||isWall()){x=8;y=document.querySelector('.hud').offsetHeight+18}  // 마네킹·벽: 왼쪽 위 고정
+  else if(v.z>1||Math.abs(v.x)>1||Math.abs(v.y)>1){x=(W-w)/2;y=H-h-34}  // 조명이 화면 밖이면 아래쪽에 고정
   else{const px=(v.x+1)/2*W,py=(1-v.y)/2*H;x=px+44+w<W?px+44:px-44-w;y=py-h/2}
   m.style.left=clamp(x,8,W-w-8)+'px';m.style.top=clamp(y,56,H-h-30)+'px';
 }
@@ -849,7 +890,9 @@ $('#ctx').addEventListener('click',e=>{
   const b=e.target.closest('[data-m]');
   if(b){mode=mode===b.dataset.m?null:b.dataset.m;renderCtx();return}
   {let c;if(c=e.target.closest('[data-mqt]')){st.mq=c.dataset.mqt;update();renderCtx();return}
-   if(c=e.target.closest('[data-pose]')){st.pose=clone(POSES[+c.dataset.pose].p);update();renderCtx();return}}
+   if(c=e.target.closest('[data-pose]')){st.pose=clone(POSES[+c.dataset.pose].p);update();renderCtx();return}
+   if(e.target.closest('#twistBtn')){twist=!twist;renderCtx();return}
+   if(e.target.closest('#jReset')&&selJ){st.pose={...st.pose,[selJ]:(POSES[0].p[selJ]||[0,0,0]).slice()};update();renderCtx();return}}
   if(e.target.closest('#ctxClose'))closeCtx();
   if(e.target.closest('#aimReset')){if(isCam3()){st.cm.pan=0;st.cm.tilt=0}else if(isWall())st.wallA=0;else if(isMq()){if(mode==='move')st.bodyTurn=0;else{st.turn=0;st.tilt=0}}else{st[pick3].yaw=0;st[pick3].pitch=0}update()}
 });
@@ -881,7 +924,8 @@ view.addEventListener('pointerdown',e=>{
   if(ptrs.size===1){
     gs={id:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now(),moved:false,pinch:0};
     if(camOn()&&!dragging())gs.cam={pan:st.cm.pan,tilt:st.cm.tilt,f:st.cm.f};
-    if(dragging())Object.assign(gs,isCam3()?{p:{...st.cm},sx:camSign()}:isMq()?{p:{turn:st.turn,tilt:st.tilt,bodyTurn:st.bodyTurn||0}}:isWall()?{p:{wallD:st.wallD,wallA:st.wallA},sx:cam.position.z>=0?1:-1}:{p:{...st[pick3]},sx:screenSign()});
+    if(dragging()&&poseEditOn())gs.pj=startJointDrag(e);
+    else if(dragging())Object.assign(gs,isCam3()?{p:{...st.cm},sx:camSign()}:isMq()?{p:{turn:st.turn,tilt:st.tilt,bodyTurn:st.bodyTurn||0}}:isWall()?{p:{wallD:st.wallD,wallA:st.wallA},sx:cam.position.z>=0?1:-1}:{p:{...st[pick3]},sx:screenSign()});
   }else if(ptrs.size===2&&gs&&gs.cam){
     const[a,b]=[...ptrs.values()];gs.pinch=Math.hypot(a.x-b.x,a.y-b.y);gs.f0=st.cm.f;gs.moved=true;
   }else if(ptrs.size===2&&gs&&dragging()&&mode==='move'&&!isMq()){
@@ -900,7 +944,7 @@ view.addEventListener('pointermove',e=>{
     else return;
     update(false);return;
   }
-  if(!dragging()||!gs.p)return;
+  if(!dragging()||!(gs.p||gs.pj))return;
   if(isCam3()){
     const c=st.cm;
     if(ptrs.size>=2&&gs.pinch){const[a,b]=[...ptrs.values()];c.dist=Math.round(clamp(gs.d*gs.pinch/Math.max(Math.hypot(a.x-b.x,a.y-b.y),1),.5,4.5)*20)/20}
@@ -911,6 +955,7 @@ view.addEventListener('pointermove',e=>{
   }
   if(isMq()){
     if(e.pointerId!==gs.id)return;
+    if(mode==='adj'){if(gs.pj)dragJoint(e,dx);update(false);return}
     if(mode==='move')st.bodyTurn=Math.round(wrapA(gs.p.bodyTurn+dx*.4));
     else{st.turn=Math.round(clamp(gs.p.turn+dx*.4,-90,90));st.tilt=Math.round(clamp(gs.p.tilt+dy*.2,-25,25))}
     update(false);return;
@@ -936,8 +981,11 @@ function endPtr(e,cancel){
   if(e.pointerId!==gs.id){gs.pinch=0;return}
   const tap=!cancel&&!gs.moved&&performance.now()-gs.t<600;
   if(tap){
-    const k=hitLight(e);
-    if(k&&k!=='wall')openCtx(k);                  // 조명
+    const jn=poseEditOn()?hitJoint(e):null;
+    const k=jn?null:hitLight(e);
+    if(jn)selectJoint(jn);                        // 자세 모드: 관절 고르기
+    else if(poseEditOn()&&selJ&&!(k&&k!=='wall'))selectJoint(null); // 빈 곳 탭 → 관절 선택 해제
+    else if(k&&k!=='wall')openCtx(k);             // 조명
     else if(pick3)closeCtx();                     // 그 외 탭 → 닫기
     else if(camOn())focusAt(e);                   // 카메라 모드: 탭한 곳에 초점
   }
