@@ -172,6 +172,7 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
       <div id="ctxPhoto" hidden>
         <div class="chips"><label class="chipbtn" for="phFile"><span data-t>사진 바꾸기</span></label><button id="phClear" data-t>사진 지우기</button><button id="phFit2" data-t>사진에 카메라 맞추기</button></div>
         <div id="ctxPhRows"></div>
+        <label class="q-c"><input type="checkbox" id="x-bgOn"> <span data-t>사진 배경을 벽에 붙이기</span></label>
       </div>
       <div id="ctxPose" hidden><details class="fold"><summary data-t>종류 · 자세 프리셋</summary><div class="q-l"><span data-t>종류</span></div><div class="chips" id="cMqType"></div><div class="q-l"><span data-t>자세</span></div><div class="chips" id="cPose"></div></details>
         <div id="jEdit"><div class="q-l"><span data-t>관절</span><output id="selJn" data-t>팔다리를 탭하세요</output></div>
@@ -218,6 +219,7 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
       <div class="line"><label class="filebtn" for="phFile"><span data-t>사진 고르기</span></label><input type="file" id="phFile" accept="image/*" hidden><button id="phFit" class="lnk" data-t>사진에 카메라 맞추기</button></div>
       <p class="note" id="phStatus"></p>
       <div id="phCtrls"></div>
+      <div class="line"><label><input type="checkbox" id="h-bgOn"> <span data-t>사진 배경을 벽에 붙이기</span></label></div>
       <p class="note" data-t>사진의 입체는 AI가 한 장에서 추정한 값이라 실제와 다를 수 있어요. 이미 찍힌 강한 그림자는 완전히 지워지지 않아요. 사진은 이 기기 밖으로 나가지 않고, 공유 링크에도 들어가지 않아요.</p>
       <p class="note"><span data-t>깊이 추정:</span> <a href="https://huggingface.co/onnx-community/depth-anything-v2-small">Depth Anything V2 Small</a> (Apache-2.0)</p>
     </div>
@@ -330,7 +332,7 @@ const POSES=[
 ];
 const MQTYPES={bust:'흉상',torso:'토르소',upper:'상반신 전체',thigh:'허벅지까지',knee:'무릎 아래까지',full:'전신',photo:'사진'};
 const JOINTS=[['pelvis','골반'],['spine','허리'],['chest','가슴'],['neck','목'],['shoulderL','왼쪽 어깨'],['elbowL','왼쪽 팔꿈치'],['wristL','왼쪽 손목'],['shoulderR','오른쪽 어깨'],['elbowR','오른쪽 팔꿈치'],['wristR','오른쪽 손목'],['hipL','왼쪽 고관절'],['kneeL','왼쪽 무릎'],['ankleL','왼쪽 발목'],['hipR','오른쪽 고관절'],['kneeR','오른쪽 무릎'],['ankleR','오른쪽 발목']];
-const GBASE={ph:{keep:70,flat:30,relief:35,size:1,cut:0},mq:'bust',bodyTurn:0,pose:JSON.parse(JSON.stringify(POSES[0].p)),amb:12,exp:0,turn:0,tilt:0,bg:'#8c8a86',wallD:1.4,wallA:0,
+const GBASE={ph:{keep:70,flat:30,relief:35,size:1,cut:0,bgOn:true},mq:'bust',bodyTurn:0,pose:JSON.parse(JSON.stringify(POSES[0].p)),amb:12,exp:0,turn:0,tilt:0,bg:'#8c8a86',wallD:1.4,wallA:0,
   cm:{on:true,az:0,dist:1.7,h:1.56,pan:0,tilt:0,f:85,Ni:4,fd:1.6,af:true,ar:'2:3',grid:'thirds',dc:false}};
 const STOPS=[1.2,1.4,1.8,2,2.8,4,5.6,8,11,16];
 const AR={'2:3':[2,3],'3:2':[3,2],'4:5':[4,5],'1:1':[1,1],'16:9':[16,9]};
@@ -491,12 +493,15 @@ const photoG=new THREE.Group();photoG.visible=false;scene.add(photoG);
 const photoMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.85,emissive:0xffffff,side:THREE.DoubleSide,alphaTest:.5,toneMapped:false});
 let photoMesh=null;
 const phPole=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,1,12),new THREE.MeshStandardMaterial({color:0x2a2a2c,roughness:.8}));phPole.castShadow=true;photoG.add(phPole);
-{const f=new THREE.Mesh(new THREE.CylinderGeometry(.18,.2,.03,32),phPole.material);f.position.y=.015;f.receiveShadow=true;photoG.add(f)}const PH={img:null,depth:null,W:0,H:0,est:null,busy:false};
+{const f=new THREE.Mesh(new THREE.CylinderGeometry(.18,.2,.03,32),phPole.material);f.position.y=.015;f.receiveShadow=true;photoG.add(f)}const PH={img:null,depth:null,W:0,H:0,est:null,busy:false,fitD:0,fitS:1};
+// 사진 배경: 인물을 뺀 나머지를 벽에 붙임. 인물 자리는 주변 색으로 메움
+const phBgMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.9,emissive:0xffffff,toneMapped:false});
+const phBg=new THREE.Mesh(new THREE.PlaneGeometry(1,1),phBgMat);phBg.receiveShadow=true;phBg.visible=false;scene.add(phBg);
 function phStatus(t){$('#phStatus').textContent=t||'';$('#phStatus').hidden=!t;$('#phLoad').textContent=t||'';$('#phLoad').hidden=!t}
 function setPh(k,v){ // 사진 설정 바꾸기 (패널·메뉴 공통)
   st.ph[k]=v;
   if(k==='flat'){clearTimeout(buildAlbedo.t);buildAlbedo.t=setTimeout(()=>PH.img&&buildAlbedo(),150)}
-  else if(k!=='keep'){clearTimeout(buildPhotoMesh.t);buildPhotoMesh.t=setTimeout(buildPhotoMesh,120)}
+  else if(k!=='keep'&&k!=='bgOn'){clearTimeout(buildPhotoMesh.t);buildPhotoMesh.t=setTimeout(buildPhotoMesh,120)}
   update(false);
 }
 const PH_TOP=1.78; // 사진 윗변 높이 (인물 사진은 보통 머리가 위쪽)
@@ -505,6 +510,7 @@ let prevMq='bust';
 function clearPhoto(){ // 사진 지우고 이전 마네킹으로
   PH.img=null;PH.depth=null;if(photoMesh){photoG.remove(photoMesh);photoMesh.geometry.dispose();photoMesh=null}
   for(const k of['map','emissiveMap','alphaMap'])if(photoMat[k]){photoMat[k].dispose();photoMat[k]=null}
+  if(phBgMat.map){phBgMat.map.dispose();phBgMat.map=phBgMat.emissiveMap=null}
   phStatus('');if(pick3)closeCtx();st.mq=prevMq&&prevMq!=='photo'?prevMq:'bust';update();
 }
 function otsu(d){ // 깊이 분포를 둘로 가르는 기준값 (인물 / 배경)
@@ -532,6 +538,35 @@ function buildAlbedo(){ // 기존 그림자 펴기: 크게 흐린 밝기로 나�
   }
   const t=new THREE.CanvasTexture(cv);t.encoding=THREE.sRGBEncoding;if(photoMat.map)photoMat.map.dispose();photoMat.map=t;photoMat.needsUpdate=true;req();
 }
+function buildPhotoBg(){ // 인물(잘라낸 부분)을 지우고 주변 색으로 채운 배경 텍스처
+  if(phBgMat.map){phBgMat.map.dispose();phBgMat.map=phBgMat.emissiveMap=null}
+  const cut=st.ph.cut/100;if(cut<=0)return;
+  const im=PH.img,sc=Math.min(1,1024/Math.max(im.width,im.height)),w=Math.round(im.width*sc),h=Math.round(im.height*sc);
+  const cv=document.createElement('canvas');cv.width=w;cv.height=h;const g=cv.getContext('2d');g.drawImage(im,0,0,w,h);
+  const P=g.getImageData(0,0,w,h),q=P.data,{W,H,depth:d}=PH,m=Math.max(0,cut-.04); // 인물 윤곽이 배경에 남지 않게 조금 넓게
+  // 밀고 당기기(push-pull): 빈 곳을 점점 작은 해상도의 평균으로 채움
+  let lv=[{w,h,c:new Float32Array(w*h*3),a:new Float32Array(w*h)}];
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x,dv=d[Math.min(H-1,Math.floor(y/h*H))*W+Math.min(W-1,Math.floor(x/w*W))];
+    if(dv<m){lv[0].a[i]=1;for(let c=0;c<3;c++)lv[0].c[i*3+c]=q[i*4+c]}}
+  while(lv[lv.length-1].w>1||lv[lv.length-1].h>1){const a=lv[lv.length-1],nw=Math.max(1,a.w>>1),nh=Math.max(1,a.h>>1),b={w:nw,h:nh,c:new Float32Array(nw*nh*3),a:new Float32Array(nw*nh)};
+    for(let y=0;y<a.h;y++)for(let x=0;x<a.w;x++){const i=y*a.w+x;if(!a.a[i])continue;const j=Math.min(nh-1,y>>1)*nw+Math.min(nw-1,x>>1);b.a[j]+=a.a[i];for(let c=0;c<3;c++)b.c[j*3+c]+=a.c[i*3+c]*a.a[i]}
+    for(let j=0;j<nw*nh;j++)if(b.a[j]){for(let c=0;c<3;c++)b.c[j*3+c]/=b.a[j];b.a[j]=1}
+    lv.push(b)}
+  if(!lv[lv.length-1].a[0])return; // 배경이 하나도 없음
+  for(let k=lv.length-2;k>=0;k--){const a=lv[k],b=lv[k+1];for(let y=0;y<a.h;y++)for(let x=0;x<a.w;x++){const i=y*a.w+x;if(a.a[i])continue;
+    const j=Math.min(b.h-1,y>>1)*b.w+Math.min(b.w-1,x>>1);for(let c=0;c<3;c++)a.c[i*3+c]=b.c[j*3+c];a.a[i]=1}}
+  for(let i=0;i<w*h;i++)for(let c=0;c<3;c++)q[i*4+c]=lv[0].c[i*3+c];
+  g.putImageData(P,0,0);const t=new THREE.CanvasTexture(cv);t.encoding=THREE.sRGBEncoding;phBgMat.map=phBgMat.emissiveMap=t;phBgMat.needsUpdate=true;
+}
+function placePhotoBg(){ // 사진 정면에서 본 그대로 벽에 겹치도록 배경 크기·위치 계산
+  phBg.visible=!!(photoG.visible&&photoMesh&&phBgMat.map&&st.ph.bgOn!==false);if(!phBg.visible)return;
+  const hM=st.ph.size,wM=hM*PH.img.width/PH.img.height,cy=phCenterY(),D=PH.fitD?PH.fitD*hM/PH.fitS:3;
+  photoG.updateMatrixWorld(true);const E=photoG.localToWorld(new THREE.Vector3(0,cy,D)),C=photoG.localToWorld(new THREE.Vector3(0,cy,0));
+  const wa=st.wallA*D2R,n=new THREE.Vector3(Math.sin(wa),0,Math.cos(wa)),dir=C.clone().sub(E),L=dir.length();dir.normalize();
+  const dn=dir.dot(n),t=wallG.position.clone().sub(E).dot(n)/dn;if(dn>-.1||t<L+.02){phBg.visible=false;return}
+  const k=t/L;phBg.position.copy(E).addScaledVector(dir,t).addScaledVector(n,.004);phBg.rotation.set(0,wa,0);phBg.scale.set(wM*k,hM*k,1);
+  phBgMat.emissiveIntensity=st.ph.keep/100;
+}
 function buildPhotoMesh(){
   if(!PH.img||!PH.depth)return;
   const {W,H,depth:d}=PH,asp=PH.img.width/PH.img.height,hM=st.ph.size,wM=hM*asp;
@@ -547,7 +582,7 @@ function buildPhotoMesh(){
   ag.putImageData(A,0,0);if(photoMat.alphaMap)photoMat.alphaMap.dispose();photoMat.alphaMap=new THREE.CanvasTexture(ac);photoMat.needsUpdate=true;
   if(photoMesh){photoG.remove(photoMesh);photoMesh.geometry.dispose()}
   photoMesh=new THREE.Mesh(g,photoMat);photoMesh.castShadow=photoMesh.receiveShadow=true;photoMesh.position.y=phCenterY();photoG.add(photoMesh);
-  phPole.scale.y=Math.max(.01,phCenterY()-hM/2);phPole.position.set(0,phPole.scale.y/2,-.04);req();
+  phPole.scale.y=Math.max(.01,phCenterY()-hM/2);phPole.position.set(0,phPole.scale.y/2,-.04);buildPhotoBg();placePhotoBg();req();
 }
 async function getEstimator(){
   if(PH.est)return PH.est;
@@ -578,7 +613,9 @@ async function loadPhoto(f){
 function fitPhotoCam(){ // 사진이 프레임을 채우도록 카메라를 정면에
   const hM=st.ph.size,asp=PH.img?PH.img.width/PH.img.height:.8,fr=frameRect(),ty=frameHalfTan(),tx=ty*fr.aw/fr.ah;
   const dist=Math.max(hM/2/ty,hM*asp/2/tx)*1.04;
-  Object.assign(st.cm,{az:0,dist:Math.round(clamp(dist,.5,4.5)*100)/100,h:Math.round(clamp(phCenterY(),.3,2.4)*100)/100,pan:0,tilt:0,af:true});
+  const d=Math.round(clamp(dist,.5,4.5)*100)/100,h=Math.round(clamp(phCenterY(),.3,2.4)*100)/100;PH.fitD=d;PH.fitS=hM;
+  // 카메라는 기본으로 마네킹 얼굴 높이를 겨누므로, 사진 가운데를 수평으로 보도록 기울기를 되돌림
+  Object.assign(st.cm,{az:0,dist:d,h,pan:0,tilt:Math.round(clamp(-Math.atan2(CAM_TY-h,d)/D2R,-45,45)*10)/10,af:true});
   st.bodyTurn=0;if(!camOn())setCamMode(true);else update();
 }
 function applyMq(){
@@ -651,7 +688,7 @@ function apply(){
   renderer.toneMappingExposure=2**st.exp;
   head.rotation.y=(st.turn+(st.bodyTurn||0))*D2R;head.rotation.x=st.tilt*D2R;applyMq();
   floorMat.color.set(st.bg);wallMat.color.set(st.bg);
-  const wa=st.wallA*D2R;wallG.position.set(-Math.sin(wa)*st.wallD,0,-Math.cos(wa)*st.wallD);wallG.rotation.y=wa;
+  const wa=st.wallA*D2R;wallG.position.set(-Math.sin(wa)*st.wallD,0,-Math.cos(wa)*st.wallD);wallG.rotation.y=wa;placePhotoBg();
   applyCam();updateCamObj();
   req();
 }
@@ -880,6 +917,7 @@ function syncOutputs(){
    JCTRL.forEach(([k],i)=>{$('#p-'+k).value=r[i];$('#op-'+k).textContent=r[i]+'°'});
    const off=st.mq==='bust'||st.mq==='photo';for(const el of[$('#jointSel'),...document.querySelectorAll('#jointCtrls input,#poseSeg button')])el.disabled=off;}
   for(const [k,,,,,f] of PHCTRL)for(const pf of['h','x']){$(`#${pf}-`+k).value=st.ph[k];$(`#o${pf}-`+k).textContent=f(st.ph[k])}
+  for(const pf of['h','x'])$(`#${pf}-bgOn`).checked=st.ph.bgOn!==false;
   $('#af').checked=st.cm.af;$('#dc').checked=st.cm.dc;
   {const c=st.cm,pr=(on)=>`aria-pressed="${on}"`;
    $('#q-f').value=c.f;$('#oq-f').textContent=c.f+'mm';$('#q-fd').value=c.fd;$('#oq-fd').textContent=c.fd.toFixed(2)+' m'+(c.af?' · '+tr('얼굴 AF'):' · MF');
@@ -920,7 +958,7 @@ document.querySelector('.panel').addEventListener('input',e=>{
   else if(id.startsWith('g-'))st[id.slice(2)]=+e.target.value;
   else if(id.startsWith('p-')){const jn=$('#jointSel').value,r=[...((st.pose&&st.pose[jn])||[0,0,0])];r['xyz'.indexOf(id[2])]=+e.target.value;st.pose={...st.pose,[jn]:r}}
   else if(id==='jointSel'){syncOutputs();return}
-  else if(id.startsWith('h-')){setPh(id.slice(2),+e.target.value)}
+  else if(id.startsWith('h-')){setPh(id.slice(2),e.target.type==='checkbox'?e.target.checked:+e.target.value)}
   else if(id==='phFile')return;
   else if(id.startsWith('k-')){st.cm[id.slice(2)]=+e.target.value;if(id==='k-fd')st.cm.af=false}
   else if(id==='af')st.cm.af=e.target.checked;
@@ -1047,7 +1085,7 @@ $('#ctx').addEventListener('click',e=>{
   if(e.target.closest('#aimReset')){if(isCam3()){st.cm.pan=0;st.cm.tilt=0}else if(isWall())st.wallA=0;else if(isMq()){if(mode==='move')st.bodyTurn=0;else{st.turn=0;st.tilt=0}}else{st[pick3].yaw=0;st[pick3].pitch=0}update()}
 });
 $('#ctx').addEventListener('input',e=>{
-  if(e.target.id.startsWith('x-')){setPh(e.target.id.slice(2),+e.target.value);return}
+  if(e.target.id.startsWith('x-')){setPh(e.target.id.slice(2),e.target.type==='checkbox'?e.target.checked:+e.target.value);return}
   if(e.target.id==='w-col'){st.bg=e.target.value;update();return}
   const p=st[pick3],id=e.target.id;if(!p)return;
   if(id==='a-pow')p.pow=+e.target.value;else if(id==='a-size')p.size=+e.target.value;
