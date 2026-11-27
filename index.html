@@ -172,6 +172,7 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
       <div id="ctxPhoto" hidden>
         <div class="chips"><label class="chipbtn" for="phFile"><span data-t>사진 바꾸기</span></label><button id="phClear" data-t>사진 지우기</button><button id="phFit2" data-t>사진에 카메라 맞추기</button></div>
         <div id="ctxPhRows"></div>
+        <label class="q-c"><input type="checkbox" id="x-cut"> <span data-t>배경 잘라내기</span></label>
         <label class="q-c"><input type="checkbox" id="x-bgOn"> <span data-t>사진 배경을 벽에 붙이기</span></label>
       </div>
       <div id="ctxPose" hidden><details class="fold"><summary data-t>종류 · 자세 프리셋</summary><div class="q-l"><span data-t>종류</span></div><div class="chips" id="cMqType"></div><div class="q-l"><span data-t>자세</span></div><div class="chips" id="cPose"></div></details>
@@ -219,9 +220,10 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
       <div class="line"><label class="filebtn" for="phFile"><span data-t>사진 고르기</span></label><input type="file" id="phFile" accept="image/*" hidden><button id="phFit" class="lnk" data-t>사진에 카메라 맞추기</button></div>
       <p class="note" id="phStatus"></p>
       <div id="phCtrls"></div>
-      <div class="line"><label><input type="checkbox" id="h-bgOn"> <span data-t>사진 배경을 벽에 붙이기</span></label></div>
+      <div class="line"><label><input type="checkbox" id="h-cut"> <span data-t>배경 잘라내기</span></label><label><input type="checkbox" id="h-bgOn"> <span data-t>사진 배경을 벽에 붙이기</span></label></div>
       <p class="note" data-t>사진의 입체는 AI가 한 장에서 추정한 값이라 실제와 다를 수 있어요. 이미 찍힌 강한 그림자는 완전히 지워지지 않아요. 사진은 이 기기 밖으로 나가지 않고, 공유 링크에도 들어가지 않아요.</p>
       <p class="note"><span data-t>깊이 추정:</span> <a href="https://huggingface.co/onnx-community/depth-anything-v2-small">Depth Anything V2 Small</a> (Apache-2.0)</p>
+      <p class="note"><span data-t>인물 윤곽:</span> <a href="https://huggingface.co/onnx-community/ormbg-ONNX">ormbg</a> (Apache-2.0)</p>
     </div>
     <div class="line" style="margin:4px 0 0;min-height:0"><span data-t>자세</span></div><div class="seg" id="poseSeg"></div>
     <div class="line"><span data-t>관절</span><select id="jointSel" class="sel"></select></div>
@@ -318,7 +320,7 @@ en:{
 '키:필 —':'Key:Fill —','키:필 — (둘 다 켜야 계산)':'Key:Fill — (turn both on)','키:필 {0}:1 · {1}스톱':'Key:Fill {0}:1 · {1} stops',
 '＋ 현재 카메라 저장':'＋ Save camera','초기 위치':'Home','링크 공유':'Share link','사진 저장':'Save photo','사진':'Photo','저장할 사진':'Photo to save',
 '위치 {0}':'Spot {0}','위치 {0} 삭제':'Delete spot {0}','저장된 위치가 없어요':'No saved positions',
-'다시 복사':'Copy again','그대로 두기':'Keep as is','사진 배경을 벽에 붙이기':'Put the photo background on the wall','초기 위치로 되돌릴까요?':'Return to the home position?','카메라 위치·방향·렌즈·초점이 처음 상태로 돌아가요. 저장해 둔 위치는 그대로예요.':'Camera position, direction, lens and focus go back to the start. Saved positions stay.','모든 설정을 기본값으로 되돌릴까요?':'Reset all settings to defaults?','조명·마네킹·벽·카메라 설정이 모두 처음 상태로 돌아가요. 저장해 둔 카메라 위치는 그대로예요.':'Lights, mannequin, wall and camera settings all go back to the start. Saved camera positions stay.',
+'다시 복사':'Copy again','그대로 두기':'Keep as is','인물 윤곽:':'Subject outline:','인물 윤곽 찾는 중…':'Finding the subject outline…','사진 배경을 벽에 붙이기':'Put the photo background on the wall','초기 위치로 되돌릴까요?':'Return to the home position?','카메라 위치·방향·렌즈·초점이 처음 상태로 돌아가요. 저장해 둔 위치는 그대로예요.':'Camera position, direction, lens and focus go back to the start. Saved positions stay.','모든 설정을 기본값으로 되돌릴까요?':'Reset all settings to defaults?','조명·마네킹·벽·카메라 설정이 모두 처음 상태로 돌아가요. 저장해 둔 카메라 위치는 그대로예요.':'Lights, mannequin, wall and camera settings all go back to the start. Saved camera positions stay.',
 '복사했어요.':'Copied.','링크를 복사했어요.':'Link copied.',
 '복사가 막혔어요. 위 칸을 길게 눌러(또는 Ctrl+C) 직접 복사해 주세요.':'Copying was blocked. Long-press the box above (or press Ctrl+C) to copy it yourself.',
 '조명·카메라·벽·마네킹 설정이 모두 담겨 있어요.':'It contains all light, camera, backdrop and mannequin settings.',
@@ -382,7 +384,7 @@ ja:{
 '키:필 —':'キー:フィル —','키:필 — (둘 다 켜야 계산)':'キー:フィル —（両方オンで計算）','키:필 {0}:1 · {1}스톱':'キー:フィル {0}:1 · {1}段',
 '＋ 현재 카메라 저장':'＋ カメラを保存','초기 위치':'初期位置','링크 공유':'リンク共有','사진 저장':'写真を保存','사진':'写真','저장할 사진':'保存する写真',
 '위치 {0}':'位置 {0}','위치 {0} 삭제':'位置 {0} を削除','저장된 위치가 없어요':'保存した位置はありません',
-'다시 복사':'もう一度コピー','그대로 두기':'そのままにする','사진 배경을 벽에 붙이기':'写真の背景を壁に貼る','초기 위치로 되돌릴까요?':'初期位置に戻しますか？','카메라 위치·방향·렌즈·초점이 처음 상태로 돌아가요. 저장해 둔 위치는 그대로예요.':'カメラの位置・向き・レンズ・ピントが最初の状態に戻ります。保存した位置はそのままです。','모든 설정을 기본값으로 되돌릴까요?':'すべての設定を初期設定に戻しますか？','조명·마네킹·벽·카메라 설정이 모두 처음 상태로 돌아가요. 저장해 둔 카메라 위치는 그대로예요.':'照明・マネキン・壁・カメラの設定がすべて最初の状態に戻ります。保存したカメラ位置はそのままです。',
+'다시 복사':'もう一度コピー','그대로 두기':'そのままにする','인물 윤곽:':'人物の輪郭:','인물 윤곽 찾는 중…':'人物の輪郭を探しています…','사진 배경을 벽에 붙이기':'写真の背景を壁に貼る','초기 위치로 되돌릴까요?':'初期位置に戻しますか？','카메라 위치·방향·렌즈·초점이 처음 상태로 돌아가요. 저장해 둔 위치는 그대로예요.':'カメラの位置・向き・レンズ・ピントが最初の状態に戻ります。保存した位置はそのままです。','모든 설정을 기본값으로 되돌릴까요?':'すべての設定を初期設定に戻しますか？','조명·마네킹·벽·카메라 설정이 모두 처음 상태로 돌아가요. 저장해 둔 카메라 위치는 그대로예요.':'照明・マネキン・壁・カメラの設定がすべて最初の状態に戻ります。保存したカメラ位置はそのままです。',
 '복사했어요.':'コピーしました。','링크를 복사했어요.':'リンクをコピーしました。',
 '복사가 막혔어요. 위 칸을 길게 눌러(또는 Ctrl+C) 직접 복사해 주세요.':'コピーがブロックされました。上の欄を長押し（または Ctrl+C）して直接コピーしてください。',
 '조명·카메라·벽·마네킹 설정이 모두 담겨 있어요.':'ライト・カメラ・背景紙・マネキンの設定がすべて入っています。',
@@ -467,12 +469,12 @@ const POSES=[
 ];
 const MQTYPES={bust:'흉상',torso:'토르소',upper:'상반신 전체',thigh:'허벅지까지',knee:'무릎 아래까지',full:'전신',photo:'사진'};
 const JOINTS=[['pelvis','골반'],['spine','허리'],['chest','가슴'],['neck','목'],['shoulderL','왼쪽 어깨'],['elbowL','왼쪽 팔꿈치'],['wristL','왼쪽 손목'],['shoulderR','오른쪽 어깨'],['elbowR','오른쪽 팔꿈치'],['wristR','오른쪽 손목'],['hipL','왼쪽 고관절'],['kneeL','왼쪽 무릎'],['ankleL','왼쪽 발목'],['hipR','오른쪽 고관절'],['kneeR','오른쪽 무릎'],['ankleR','오른쪽 발목']];
-const GBASE={ph:{keep:70,flat:30,relief:35,size:1,cut:0,bgOn:true},mq:'bust',bodyTurn:0,pose:JSON.parse(JSON.stringify(POSES[0].p)),amb:12,exp:0,turn:0,tilt:0,bg:'#8c8a86',wallD:1.4,wallA:0,
+const GBASE={ph:{keep:70,flat:30,relief:35,size:1,cut:true,bgOn:true},mq:'bust',bodyTurn:0,pose:JSON.parse(JSON.stringify(POSES[0].p)),amb:12,exp:0,turn:0,tilt:0,bg:'#8c8a86',wallD:1.4,wallA:0,
   cm:{on:true,az:0,dist:1.7,h:1.56,pan:0,tilt:0,f:85,Ni:4,fd:1.6,af:true,ar:'2:3',grid:'thirds',dc:false}};
 const STOPS=[1.2,1.4,1.8,2,2.8,4,5.6,8,11,16];
 const AR={'2:3':[2,3],'3:2':[3,2],'4:5':[4,5],'1:1':[1,1],'16:9':[16,9]};
 const GRIDS={off:'끔',thirds:'3분할',phi:'황금비',cross:'십자'};
-const PHCTRL=[['keep','원래 빛',0,100,1,v=>v+'%'],['flat','기존 그림자 펴기',0,100,1,v=>v+'%'],['relief','입체감',0,100,1,v=>v+'%'],['size','사진 크기',.3,2,.01,v=>(+v).toFixed(2)+' m'],['cut','배경 잘라내기',0,100,1,v=>v+'%']];
+const PHCTRL=[['keep','원래 빛',0,100,1,v=>v+'%'],['flat','기존 그림자 펴기',0,100,1,v=>v+'%'],['relief','입체감',0,100,1,v=>v+'%'],['size','사진 크기',.3,2,.01,v=>(+v).toFixed(2)+' m']];
 const JCTRL=[['x','앞뒤 굽힘'],['y','비틀기'],['z','옆으로']];
 const CAMCTRL=[
   ['f','렌즈',24,200,1,v=>`${v}mm`],
@@ -628,7 +630,7 @@ const photoG=new THREE.Group();photoG.visible=false;scene.add(photoG);
 const photoMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.85,emissive:0xffffff,side:THREE.DoubleSide,alphaTest:.5,toneMapped:false});
 let photoMesh=null;
 const phPole=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,1,12),new THREE.MeshStandardMaterial({color:0x2a2a2c,roughness:.8}));phPole.castShadow=true;photoG.add(phPole);
-{const f=new THREE.Mesh(new THREE.CylinderGeometry(.18,.2,.03,32),phPole.material);f.position.y=.015;f.receiveShadow=true;photoG.add(f)}const PH={img:null,depth:null,W:0,H:0,est:null,busy:false,fitD:0,fitS:1};
+{const f=new THREE.Mesh(new THREE.CylinderGeometry(.18,.2,.03,32),phPole.material);f.position.y=.015;f.receiveShadow=true;photoG.add(f)}const PH={img:null,depth:null,fg:null,W:0,H:0,est:null,seg:null,busy:false,fitD:0,fitS:1};
 // 사진 배경: 인물을 뺀 나머지를 벽에 붙임. 인물 자리는 주변 색으로 메움
 const phBgMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.9,emissive:0xffffff,toneMapped:false});
 const phBg=new THREE.Mesh(new THREE.PlaneGeometry(1,1),phBgMat);phBg.receiveShadow=true;phBg.visible=false;scene.add(phBg);
@@ -643,7 +645,7 @@ const PH_TOP=1.78; // 사진 윗변 높이 (인물 사진은 보통 머리가 �
 const phCenterY=()=>PH_TOP-st.ph.size/2;
 let prevMq='bust';
 function clearPhoto(){ // 사진 지우고 이전 마네킹으로
-  PH.img=null;PH.depth=null;if(photoMesh){photoG.remove(photoMesh);photoMesh.geometry.dispose();photoMesh=null}
+  PH.img=null;PH.depth=null;PH.fg=null;if(photoMesh){photoG.remove(photoMesh);photoMesh.geometry.dispose();photoMesh=null}
   for(const k of['map','emissiveMap','alphaMap'])if(photoMat[k]){photoMat[k].dispose();photoMat[k]=null}
   if(phBgMat.map){phBgMat.map.dispose();phBgMat.map=phBgMat.emissiveMap=null}
   phStatus('');if(pick3)closeCtx();st.mq=prevMq&&prevMq!=='photo'?prevMq:'bust';update();
@@ -675,13 +677,13 @@ function buildAlbedo(){ // 기존 그림자 펴기: 크게 흐린 밝기로 나�
 }
 function buildPhotoBg(){ // 인물(잘라낸 부분)을 지우고 주변 색으로 채운 배경 텍스처
   if(phBgMat.map){phBgMat.map.dispose();phBgMat.map=phBgMat.emissiveMap=null}
-  const cut=st.ph.cut/100;if(cut<=0)return;
+  if(!st.ph.cut||!PH.fg)return;
   const im=PH.img,sc=Math.min(1,1024/Math.max(im.width,im.height)),w=Math.round(im.width*sc),h=Math.round(im.height*sc);
   const cv=document.createElement('canvas');cv.width=w;cv.height=h;const g=cv.getContext('2d');g.drawImage(im,0,0,w,h);
-  const P=g.getImageData(0,0,w,h),q=P.data,{W,H,depth:d}=PH;
+  const P=g.getImageData(0,0,w,h),q=P.data,{W,H,fg:F}=PH;
   // 인물 자리 + 둘레를 넓게 비움 (머리카락 끝 같은 윤곽이 배경에 유령처럼 남지 않게)
-  let hole=new Uint8Array(w*h);for(let y=0;y<h;y++)for(let x=0;x<w;x++)hole[y*w+x]=d[Math.min(H-1,Math.floor(y/h*H))*W+Math.min(W-1,Math.floor(x/w*W))]>=cut-.04?1:0;
-  const R=Math.round(Math.max(w,h)*.02),grow=(a,dx,dy)=>{const b=new Uint8Array(w*h);for(let y=0;y<h;y++)for(let x=0;x<w;x++){if(!a[y*w+x])continue;
+  let hole=new Uint8Array(w*h);for(let y=0;y<h;y++)for(let x=0;x<w;x++)hole[y*w+x]=F[Math.min(H-1,Math.floor(y/h*H))*W+Math.min(W-1,Math.floor(x/w*W))];
+  const R=Math.max(2,Math.round(Math.max(w,h)*.006)),grow=(a,dx,dy)=>{const b=new Uint8Array(w*h);for(let y=0;y<h;y++)for(let x=0;x<w;x++){if(!a[y*w+x])continue;
     for(let t=-R;t<=R;t++){const xx=x+t*dx,yy=y+t*dy;if(xx>=0&&yy>=0&&xx<w&&yy<h)b[yy*w+xx]=1}}return b};
   hole=grow(grow(hole,1,0),0,1);
   // 밀고 당기기(push-pull): 빈 곳을 점점 작은 해상도의 평균으로 채움
@@ -712,10 +714,10 @@ function buildPhotoMesh(){
   if(!PH.img||!PH.depth)return;
   const {W,H,depth:d}=PH,asp=PH.img.width/PH.img.height,hM=st.ph.size,wM=hM*asp;
   const sx=Math.min(W-1,320),sy=Math.max(2,Math.round(sx/asp*(H/W)*asp)),g=new THREE.PlaneGeometry(wM,hM,sx,sy),pos=g.attributes.position;
-  const zk=(st.ph.relief/100)*hM*.7,cut=st.ph.cut/100,gw=sx+1,gh=sy+1,N=gw*gh;
+  const zk=(st.ph.relief/100)*hM*.7,cut=!!(st.ph.cut&&PH.fg),gw=sx+1,gh=sy+1,N=gw*gh;
   // 격자 깊이와 인물/배경 구분. PlaneGeometry는 위쪽 줄부터
   const z=new Float32Array(N),fg=new Uint8Array(N);
-  for(let iy=0;iy<gh;iy++)for(let ix=0;ix<gw;ix++){const i=iy*gw+ix,dv=d[Math.min(H-1,Math.round(iy/sy*(H-1)))*W+Math.min(W-1,Math.round(ix/sx*(W-1)))];z[i]=dv;fg[i]=cut<=0||dv>=cut?1:0}
+  for(let iy=0;iy<gh;iy++)for(let ix=0;ix<gw;ix++){const i=iy*gw+ix,j=Math.min(H-1,Math.round(iy/sy*(H-1)))*W+Math.min(W-1,Math.round(ix/sx*(W-1)));z[i]=d[j];fg[i]=!cut||PH.fg[j]?1:0}
   // 표면을 부드럽게: 머리카락·주름 같은 잔결이 울퉁불퉁한 면이 되어 빛이 얼룩지던 문제.
   // 인물은 인물끼리, 배경은 배경끼리만 섞어서 윤곽은 유지
   const r=Math.max(2,Math.round(sx/45)),tmp=new Float32Array(N);
@@ -723,14 +725,14 @@ function buildPhotoMesh(){
     for(let t=-r;t<=r;t++){const x=ix+t*dx,y=iy+t*dy;if(x<0||y<0||x>=gw||y>=gh)continue;const j=y*gw+x;if(fg[j]!==fg[i])continue;sum+=a[j];n++}b[i]=sum/n}};
   for(let k=0;k<2;k++){blur(z,tmp,1,0);blur(tmp,z,0,1)}
   // 인물 바로 바깥 배경 점은 인물 깊이로 당겨서, 윤곽에 길게 늘어진 면이 생기지 않게 (투명 처리는 알파가 맡음)
-  if(cut>0){const z2=z.slice();for(let iy=0;iy<gh;iy++)for(let ix=0;ix<gw;ix++){const i=iy*gw+ix;if(fg[i])continue;let sum=0,n=0;
+  if(cut){const z2=z.slice();for(let iy=0;iy<gh;iy++)for(let ix=0;ix<gw;ix++){const i=iy*gw+ix;if(fg[i])continue;let sum=0,n=0;
     for(const[ox,oy]of[[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]]){const x=ix+ox,y=iy+oy;if(x<0||y<0||x>=gw||y>=gh)continue;const j=y*gw+x;if(fg[j]){sum+=z2[j];n++}}
     if(n)z[i]=sum/n}}
   for(let i=0;i<N;i++)pos.setZ(i,(z[i]-1)*zk);
   g.computeVertexNormals();
   // 배경 잘라내기: 깊이가 기준보다 먼 곳은 투명
   const ac=document.createElement('canvas');ac.width=W;ac.height=H;const ag=ac.getContext('2d'),A=ag.createImageData(W,H);
-  for(let i=0;i<W*H;i++){const on=cut<=0||d[i]>=cut;A.data[i*4]=A.data[i*4+1]=A.data[i*4+2]=on?255:0;A.data[i*4+3]=255}
+  for(let i=0;i<W*H;i++){const on=!cut||PH.fg[i];A.data[i*4]=A.data[i*4+1]=A.data[i*4+2]=on?255:0;A.data[i*4+3]=255}
   ag.putImageData(A,0,0);if(photoMat.alphaMap)photoMat.alphaMap.dispose();photoMat.alphaMap=new THREE.CanvasTexture(ac);photoMat.needsUpdate=true;
   if(photoMesh){photoG.remove(photoMesh);photoMesh.geometry.dispose()}
   photoMesh=new THREE.Mesh(g,photoMat);photoMesh.castShadow=photoMesh.receiveShadow=true;photoMesh.position.y=phCenterY();photoG.add(photoMesh);
@@ -745,6 +747,28 @@ async function getEstimator(){
   if(!PH.est)PH.est=await pipeline('depth-estimation','onnx-community/depth-anything-v2-small',{device:'wasm',dtype:'q8',progress_callback:prog});
   return PH.est;
 }
+async function getSegmenter(){ // 인물(피사체) 윤곽 찾기
+  if(PH.seg)return PH.seg;
+  const {pipeline}=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2');
+  const prog=p=>{if(p.status==='progress'&&p.total)phStatus(tr('모델 내려받는 중 {0}%',Math.round(p.loaded/p.total*100)))};
+  return PH.seg=await pipeline('background-removal','onnx-community/ormbg-ONNX',{device:'wasm',dtype:'q8',progress_callback:prog});
+}
+function buildMask(matte,mw,mh){ // 윤곽 모델 결과 + 깊이로 인물 영역 만들기
+  const {W,H,depth:d}=PH,N=W*H,fg=new Uint8Array(N);
+  if(!matte){const t=otsu(d);for(let i=0;i<N;i++)fg[i]=d[i]>=t?1:0;return fg} // 윤곽 모델 실패 → 깊이만으로
+  const M=new Float32Array(N);for(let y=0;y<H;y++)for(let x=0;x<W;x++)M[y*W+x]=matte[Math.min(mh-1,Math.floor(y/H*mh))*mw+Math.min(mw-1,Math.floor(x/W*mw))];
+  const ds=[];for(let i=0;i<N;i++)if(M[i]>=.5){fg[i]=1;if(!(i%7))ds.push(d[i])}
+  if(ds.length<50)return fg;
+  ds.sort((a,b)=>a-b);const lo=ds[Math.floor(ds.length*.1)]-.03,hi=ds[Math.floor(ds.length*.98)]+.02;
+  // 모델이 놓친 얇은 소품(갓 챙 등)을 깊이가 인물과 같은 범위인 곳에서 이어 붙이기. 너무 멀리는 안 퍼지게
+  // 발 근처(인물 아래쪽 15%)는 바닥과 깊이가 같아서 퍼지지 않게
+  let top=H,bot=0;for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(fg[y*W+x]){if(y<top)top=y;bot=y;break}
+  const yMax=top+(bot-top)*.85,R=Math.round(Math.max(W,H)*.06),dist=new Uint16Array(N).fill(65535),qu=new Int32Array(N);let qh=0,qt=0;
+  for(let i=0;i<N;i++)if(fg[i]){dist[i]=0;qu[qt++]=i}
+  while(qh<qt){const i=qu[qh++],x=i%W,y=(i-x)/W,nd=dist[i]+1;if(nd>R)continue;
+    for(const j of[x>0?i-1:-1,x<W-1?i+1:-1,y>0?i-W:-1,y<H-1?i+W:-1]){if(j<0||dist[j]<=nd||j/W>yMax)continue;const v=d[j];if(v<lo||v>hi)continue;dist[j]=nd;fg[j]=1;qu[qt++]=j}}
+  return fg;
+}
 async function loadPhoto(f){
   if(!f||!f.type||!f.type.startsWith('image/')||PH.busy)return;PH.busy=true;
   if(st.mq!=='photo'){prevMq=st.mq;st.mq='photo';update()}
@@ -757,7 +781,11 @@ async function loadPhoto(f){
     phStatus(tr('모델 준비 중…'));const est=await getEstimator();
     phStatus(tr('입체 추정 중…'));const out=await est(cv.toDataURL('image/jpeg',.92)),pd=out.predicted_depth;
     PH.H=pd.dims[pd.dims.length-2];PH.W=pd.dims[pd.dims.length-1];PH.depth=smoothDepth(pd.data,PH.W,PH.H);
-    st.ph.cut=Math.round(otsu(PH.depth)*100); // 인물과 배경을 자동으로 나눠 배경 잘라내기
+    let matte=null,mw=0,mh=0;
+    try{phStatus(tr('인물 윤곽 찾는 중…'));const seg=await getSegmenter();phStatus(tr('인물 윤곽 찾는 중…'));
+      const o=await seg(cv.toDataURL('image/jpeg',.92)),r=Array.isArray(o)?o[0]:o,ch=r.channels;mw=r.width;mh=r.height;
+      matte=new Float32Array(mw*mh);for(let i=0;i<mw*mh;i++)matte[i]=r.data[i*ch+ch-1]/255}catch(e){console.warn(e)}
+    PH.fg=buildMask(matte,mw,mh);st.ph.cut=true;
     buildPhotoMesh();phStatus('');fitPhotoCam();
   }catch(e){console.error(e);phStatus(tr('입체를 추정하지 못했어요')+': '+String(e&&e.message||e).slice(0,80))}
   PH.busy=false;update();
@@ -1069,7 +1097,7 @@ function syncOutputs(){
    JCTRL.forEach(([k],i)=>{$('#p-'+k).value=r[i];$('#op-'+k).textContent=r[i]+'°'});
    const off=st.mq==='bust'||st.mq==='photo';for(const el of[$('#jointSel'),...document.querySelectorAll('#jointCtrls input,#poseSeg button')])el.disabled=off;}
   for(const [k,,,,,f] of PHCTRL)for(const pf of['h','x']){$(`#${pf}-`+k).value=st.ph[k];$(`#o${pf}-`+k).textContent=f(st.ph[k])}
-  for(const pf of['h','x'])$(`#${pf}-bgOn`).checked=st.ph.bgOn!==false;
+  for(const pf of['h','x']){$(`#${pf}-bgOn`).checked=st.ph.bgOn!==false;$(`#${pf}-cut`).checked=!!st.ph.cut;$(`#${pf}-bgOn`).disabled=!st.ph.cut}
   $('#af').checked=st.cm.af;$('#dc').checked=st.cm.dc;
   {const c=st.cm,pr=(on)=>`aria-pressed="${on}"`;
    $('#q-f').value=c.f;$('#oq-f').textContent=c.f+'mm';$('#q-fd').value=c.fd;$('#oq-fd').textContent=c.fd.toFixed(2)+' m'+(c.af?' · '+tr('얼굴 AF'):' · MF');

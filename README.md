@@ -30,7 +30,7 @@
 
 위쪽 **사진** 버튼으로 찍어 둔 사진을 열면 3D 장면 안에서 다시 비춰 볼 수 있어요. 다시 누르면 사진 메뉴(바꾸기·지우기·카메라 맞추기·설정)가 열려요.
 
-- AI가 사진 한 장에서 깊이를 추정해([Depth Anything V2 Small](https://huggingface.co/onnx-community/depth-anything-v2-small), Apache-2.0) 입체 부조를 만들고 마네킹 자리에 세워요
+- AI가 사진 한 장에서 깊이를 추정하고([Depth Anything V2 Small](https://huggingface.co/onnx-community/depth-anything-v2-small), Apache-2.0) 인물 윤곽을 찾아([ormbg](https://huggingface.co/onnx-community/ormbg-ONNX), Apache-2.0) 입체 부조를 만들고 마네킹 자리에 세워요
 - 그래서 3D 조명(위치·거리·소프트박스 크기·그림자·다듬기·심도)과 배경지가 그대로 적용돼요
 - 사진을 열면 깊이로 인물과 배경을 자동으로 나눠 배경을 잘라내고, 인물을 스탠드 위에 세워요 (배경 잘라내기로 조절)
 - 원래 사진의 빛은 "원래 빛"만큼 남기고 그 위에 조명이 더해져요. 기존 그림자 펴기·입체감·사진 크기 조절
