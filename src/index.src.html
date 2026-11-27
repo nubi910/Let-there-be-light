@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>라이팅 시뮬레이터</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: 촬영 현장의 실용 도구, 조용하고 정확하게
+   IDEA: 스튜디오 라이팅 다이어그램(위에서 본 배치도) + 테더링 모니터
+   PICTURE: 실시간 3D 마네킹 머리, 조명을 끌면 그림자가 바로 바뀜
+   COLOUR and TYPE: 배경지 그레이 무채색 + 코발트 하나, IBM Plex Sans KR
+   LAYOUT: 넓으면 왼쪽 뷰포트·오른쪽 조절판, 좁으면 뷰포트→배치도→조절 */
+:root{color-scheme:light dark;
+  --bg:light-dark(#e9e7e3,#161719);--panel:light-dark(#ffffff,#202124);
+  --ink:light-dark(#1a1a1c,#ececea);--mute:light-dark(#66666c,#a0a0a6);
+  --line:light-dark(#d8d5d0,#36373c);--acc:light-dark(#2457e6,#8aabff);
+  --chip:light-dark(#f1efeb,#2a2b2f)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans KR",system-ui,sans-serif;overflow-x:clip}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 380px;height:100dvh}
+.view{position:relative;background:#2b2b2d;overflow:hidden}
+.view canvas{display:block;width:100%;height:100%;touch-action:none}
+.hud{position:absolute;left:12px;right:12px;top:12px;display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;pointer-events:none}
+.hud>*{pointer-events:auto}
+.pill{background:rgba(20,20,22,.72);color:#f2f2f2;border-radius:999px;padding:6px 12px;font-size:13px;white-space:nowrap;backdrop-filter:blur(6px)}
+.refine{position:absolute;right:12px;bottom:10px;font-size:12px;color:rgba(255,255,255,.75);pointer-events:none}
+.refine[hidden]{display:none}
+.hint{right:110px;position:absolute;left:12px;bottom:10px;font-size:12px;color:rgba(255,255,255,.6);pointer-events:none}
+button{font:inherit;color:inherit;cursor:pointer}
+.pill-btn{border:0;min-height:36px}
+.pill-btn[aria-pressed=true]{background:rgba(36,87,230,.92)}
+.ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.ov-mask{fill:rgba(0,0,0,.55)}.ov-frame{fill:none;stroke:rgba(255,255,255,.75);stroke-width:1}.ov-grid{stroke:rgba(255,255,255,.45);stroke-width:1}
+.caminfo{position:absolute;transform:translate(-50%,-100%);font-size:12px;padding:4px 10px;pointer-events:none}
+.caminfo[hidden],.focusbox[hidden]{display:none}
+.focusbox{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border:2px solid #ffd21f;border-radius:4px;pointer-events:none}
+.qcam{width:272px;max-height:calc(100% - 70px);overflow:auto}
+.q-l{display:flex;justify-content:space-between;font-size:13px;margin:10px 0 4px;color:#e6e6ea}.q-l output{color:#c9c9cf;font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chips button{border:1px solid rgba(255,255,255,.22);background:transparent;border-radius:999px;min-height:34px;padding:0 10px;font-size:12px}
+.chips button[aria-pressed=true]{background:#2457e6;border-color:#2457e6;color:#fff}
+.qcam input[type=range]{width:100%;height:28px;accent-color:#8aabff;margin:4px 0 0}
+.q-c{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px}
+.seg{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 8px}
+.seg button{border:1px solid var(--line);background:var(--chip);border-radius:8px;min-height:36px;padding:0 10px;font-size:13px}
+.seg button[aria-pressed=true]{border-color:var(--acc);color:var(--acc);font-weight:600}
+.pill-btn:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.panel{background:var(--panel);overflow:auto;padding:18px 18px 28px;border-left:1px solid var(--line)}
+h1{font-size:22px;line-height:1.1;margin:0 0 2px;font-weight:700}
+.sub{color:var(--mute);font-size:13px;margin:0 0 14px}
+h2{font-size:13px;font-weight:600;color:var(--mute);margin:18px 0 8px}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button{border:1px solid var(--line);background:var(--chip);border-radius:999px;padding:0 12px;min-height:36px;font-size:14px}
+.presets button:hover{border-color:var(--acc)}
+.mapwrap{background:var(--chip);border-radius:14px;padding:6px;margin-top:4px}
+#map{display:block;width:100%;max-width:340px;aspect-ratio:1;margin:0 auto;touch-action:none;user-select:none}
+.ring{fill:none;stroke:var(--line);stroke-width:.02}
+.rl{fill:var(--mute);font-size:.22px}
+.wall{stroke:var(--mute);stroke-width:.04;stroke-dasharray:.12 .08}
+.beam{stroke:var(--mute);stroke-width:.025;stroke-dasharray:.08 .06}
+.box{fill:var(--ink)}
+.subj{fill:var(--panel);stroke:var(--ink);stroke-width:.04}
+.camg{fill:var(--ink)}
+.fov{stroke:var(--acc);stroke-width:.025;stroke-dasharray:.1 .06;opacity:.8}
+.h{stroke:var(--ink);stroke-width:.045;cursor:grab}
+.h.sel{stroke:var(--acc);stroke-width:.1}
+.ht{fill:#111;stroke:#fff;stroke-width:.06;paint-order:stroke;font-size:.28px;font-weight:700;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.off{opacity:.35}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--chip);padding:4px;border-radius:12px}
+.tabs button{border:0;background:transparent;border-radius:9px;min-height:40px;font-weight:600}
+.tabs button[aria-pressed=true]{background:var(--panel);color:var(--acc);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.tabs button.dim{color:var(--mute);font-weight:400}
+.line{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0 4px;min-height:36px}
+.line label{display:flex;align-items:center;gap:8px}
+input[type=checkbox]{width:20px;height:20px;accent-color:var(--acc)}
+input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-radius:8px;background:none;padding:2px}
+.row{display:grid;grid-template-columns:1fr auto;gap:0 8px;margin:6px 0}
+.row output{font-variant-numeric:tabular-nums;color:var(--mute);white-space:nowrap}
+.row input{grid-column:1/-1;width:100%;height:28px;accent-color:var(--acc);margin:2px 0 0}
+.note{font-size:13px;color:var(--mute);margin:2px 0 0}
+.foot{display:flex;gap:8px;margin-top:18px}
+.foot button{border:1px solid var(--line);background:transparent;border-radius:10px;min-height:40px;padding:0 14px}
+.ctx{position:absolute;z-index:3;width:236px;background:rgba(22,22,24,.92);color:#f2f2f2;border-radius:14px;padding:10px;backdrop-filter:blur(8px);box-shadow:0 8px 28px rgba(0,0,0,.4);font-size:14px}
+.ctx[hidden],.ctx [hidden]{display:none}
+.ctx-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.ctx-h button{border:0;background:rgba(255,255,255,.12);border-radius:8px;width:36px;height:36px}
+.ctx-m{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.ctx-m button{position:relative;border:2px solid rgba(255,255,255,.16);background:transparent;border-radius:10px;min-height:56px;font-weight:600;font-size:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.ctx-m svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ctx-m i{position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;background:var(--mc)}
+.ctx-m button[aria-pressed=true]{border-color:var(--mc);background:color-mix(in srgb,var(--mc) 30%,transparent)}
+.ctx-tip{margin:8px 0 0;font-size:12px;color:#c9c9cf}
+.ctx-sub{margin-top:8px;width:100%;border:1px solid rgba(255,255,255,.2);background:transparent;border-radius:8px;min-height:36px;font-size:13px}
+#ctxAdj{margin-top:6px}#ctxAdj .row output{color:#c9c9cf}#ctxAdj input[type=range]{accent-color:#ffd21f}#ctxAdj .line{margin:6px 0 0}
+@media(max-width:899px){
+  .app{grid-template-columns:minmax(0,1fr);height:auto}
+  .view{height:58vh;min-height:320px}
+  .panel{border-left:0;border-top:1px solid var(--line)}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="view" id="view">
+    <svg class="ov" id="ov"></svg>
+    <div class="pill caminfo" id="camInfo" hidden></div>
+    <div class="focusbox" id="focusBox" hidden></div>
+    <div class="hud">
+      <span class="pill" id="ratio">키:필 —</span>
+      <span style="display:flex;gap:6px"><button class="pill pill-btn" id="mqBtn">마네킹</button><button class="pill pill-btn" id="wallBtn">벽 조절</button><button class="pill pill-btn" id="camWide" aria-pressed="false">전체 보기</button><button class="pill pill-btn" id="camReset" aria-pressed="true">카메라</button></span>
+    </div>
+    <div class="pill" id="loading" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)">얼굴 모델 불러오는 중…</div>
+    <div class="hint" id="hint"></div>
+    <div class="refine" id="refine" hidden></div>
+    <div class="ctx qcam" id="qcam" hidden>
+      <div class="ctx-h"><b>카메라 설정</b><button id="qClose" aria-label="닫기">✕</button></div>
+      <div class="q-l"><span>렌즈</span><output id="oq-f"></output></div>
+      <div class="chips" id="qF"></div><input type="range" id="q-f" min="24" max="200" step="1">
+      <div class="q-l"><span>조리개</span><output id="oq-Ni"></output></div>
+      <div class="chips" id="qN"></div>
+      <div class="q-l"><span>초점</span><output id="oq-fd"></output></div>
+      <div class="chips"><button id="qAF">얼굴 AF</button></div><input type="range" id="q-fd" min=".3" max="6" step=".01">
+      <div class="q-l"><span>화면비</span></div><div class="chips" id="qAR"></div>
+      <div class="q-l"><span>격자</span></div><div class="chips" id="qGrid"></div>
+      <label class="q-c"><input type="checkbox" id="q-dc"> 렌즈 왜곡 보정</label>
+    </div>
+    <div class="ctx" id="ctx" hidden>
+      <div class="ctx-h"><b id="ctxName">키 조명</b><button id="ctxClose" aria-label="닫기">✕</button></div>
+      <div class="ctx-m">
+        <button data-m="move" style="--mc:#ff3d7f" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg>이동<i></i></button>
+        <button data-m="rot" style="--mc:#2f7bff" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>회전<i></i></button>
+        <button data-m="adj" style="--mc:#ffd21f" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>조절<i></i></button>
+      </div>
+      <p class="ctx-tip" id="ctxTip"></p>
+      <button class="ctx-sub" id="aimReset" hidden>피사체 쪽으로 다시 겨누기</button>
+      <div id="ctxWall" hidden><div class="line"><span>배경지 색</span><input type="color" id="w-col"></div></div>
+      <div id="ctxAdj" hidden>
+        <label class="row"><span>세기</span><output id="oa-pow"></output><input type="range" id="a-pow" min="0" max="100" step="1"></label>
+        <label class="row"><span>크기</span><output id="oa-size"></output><input type="range" id="a-size" min="0" max="100" step="1"></label>
+        <div class="line"><label><input type="checkbox" id="a-on"> 켜기</label><label>색 <input type="color" id="a-col"></label></div>
+      </div>
+    </div>
+  </div>
+  <aside class="panel">
+    <h1>라이팅 시뮬레이터</h1>
+    <p class="sub">배치도에서 조명을 끌어 옮기면 그림자가 바로 바뀌어요.</p>
+
+    <h2>프리셋</h2>
+    <div class="presets" id="presets"></div>
+
+    <h2>위에서 본 배치도 (1칸 = 1m)</h2>
+    <div class="mapwrap"><svg id="map" viewBox="-4.4 -4.4 8.8 8.8" aria-label="조명 배치도"></svg></div>
+
+    <h2>조명</h2>
+    <div class="tabs" id="tabs"></div>
+    <div class="line">
+      <label><input type="checkbox" id="on"> 켜기</label>
+      <label>색 <input type="color" id="col"></label>
+    </div>
+    <div id="lightCtrls"></div>
+    <p class="note">방향 0°는 카메라 쪽, ±90°는 옆, 180°는 피사체 뒤예요.</p>
+
+    <h2>카메라</h2>
+    <div class="line" style="margin:4px 0 0;min-height:0"><span>화면비</span></div><div class="seg" id="arSeg"></div>
+    <div class="line" style="margin:4px 0 0;min-height:0"><span>격자</span></div><div class="seg" id="gridSeg"></div>
+    <div id="camCtrls"></div>
+    <div class="line"><label><input type="checkbox" id="af"> 얼굴 자동 초점(AF)</label><label><input type="checkbox" id="dc"> 렌즈 왜곡 보정</label></div>
+    <p class="note">카메라 모드에서 화면을 끌면 카메라 방향, 핀치/휠은 줌, 탭하면 그 지점에 초점(MF)이 맞아요. 배치도의 카메라도 끌어서 옮길 수 있어요. 심도(배경 흐림)는 멈춘 뒤 다듬는 동안 나타나요.</p>
+
+    <h2>전체</h2>
+    <div id="globalCtrls"></div>
+    <div class="line"><span>배경지 색</span><input type="color" id="bg"></div>
+
+    <div class="foot"><button id="reset">기본값으로</button></div>
+    <p class="note" style="margin-top:14px">얼굴 모델: <a href="https://creativecommons.org/licenses/by/3.0/">Infinite, 3D Head Scan by Lee Perry-Smith</a> (CC BY 3.0), 재질만 변경</p>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<!--ASSETS-->
+<script>
+{
+const $=s=>document.querySelector(s);
+/* ---------- PCSS: 광원 크기에 따라 가까우면 선명, 멀수록 퍼지는 그림자 ---------- */
+const SHADOW_NEAR=.2,SHADOW_FAR=9,SHADOW_FW=2*Math.tan(Math.PI/5); // 스포트라이트 각도 π/5 기준, 거리 1m에서 그림자 맵 폭
+{
+  const glsl=`
+#define PCSS_NEAR ${SHADOW_NEAR.toFixed(2)}
+#define PCSS_FAR ${SHADOW_FAR.toFixed(2)}
+#define PCSS_BLOCKER 20
+#define PCSS_PCF 32
+float pcssLin(float z){float n=z*2.0-1.0;return 2.0*PCSS_NEAR*PCSS_FAR/(PCSS_FAR+PCSS_NEAR-n*(PCSS_FAR-PCSS_NEAR));}
+float pcssNoise(vec2 p){return fract(52.9829189*fract(dot(p,vec2(0.06711056,0.00583715))));}
+vec2 pcssVogel(int i,float n,float phi){float r=sqrt((float(i)+0.5)/n);float t=float(i)*2.39996+phi;return r*vec2(cos(t),sin(t));}
+float PCSS(sampler2D sm,vec4 sc,float L){
+  float zR=sc.z,dR=pcssLin(zR),phi=pcssNoise(gl_FragCoord.xy)*6.2831853;
+  float search=clamp(L*(dR-PCSS_NEAR)/dR,0.002,0.08);
+  float sum=0.0,cnt=0.0;
+  for(int i=0;i<PCSS_BLOCKER;i++){
+    float d=unpackRGBAToDepth(texture2D(sm,sc.xy+pcssVogel(i,float(PCSS_BLOCKER),phi)*search));
+    if(d<zR){sum+=pcssLin(d);cnt+=1.0;}
+  }
+  if(cnt<0.5)return 1.0;
+  float dB=sum/cnt;
+  float rad=clamp((dR-dB)/dB*L/dR,0.0006,0.06);
+  float s=0.0;
+  for(int i=0;i<PCSS_PCF;i++)s+=step(zR,unpackRGBAToDepth(texture2D(sm,sc.xy+pcssVogel(i,float(PCSS_PCF),phi)*rad)));
+  return s/float(PCSS_PCF);
+}
+`;
+  let c=THREE.ShaderChunk.shadowmap_pars_fragment;
+  const a=c.indexOf('float getShadow('),b=c.indexOf('#if defined( SHADOWMAP_TYPE_PCF )',a);
+  if(a>0&&b>a){
+    c=c.slice(0,a)+glsl+c.slice(a,b)+'#if 1\n\t\t\tshadow = PCSS( shadowMap, shadowCoord, shadowRadius );\n\t\t#elif defined( SHADOWMAP_TYPE_PCF )'+c.slice(b+'#if defined( SHADOWMAP_TYPE_PCF )'.length);
+    THREE.ShaderChunk.shadowmap_pars_fragment=c;
+  }
+}
+
+const D2R=Math.PI/180, HEAD_Y=1.58, BUST_H=.42;
+const LIGHTS=['key','fill','rim'];
+const NAME={key:'키',fill:'필',rim:'림'};
+
+const BASE={
+  key:{on:true,az:45,el:40,d:1.5,pow:75,size:35,col:'#ffffff',yaw:0,pitch:0},
+  fill:{on:true,az:-45,el:10,d:2.2,pow:30,size:80,col:'#ffffff',yaw:0,pitch:0},
+  rim:{on:true,az:150,el:30,d:1.8,pow:50,size:15,col:'#ffffff',yaw:0,pitch:0}
+};
+const PRESETS=[
+  {n:'렘브란트',key:{az:45,el:40,d:1.5,pow:75,size:35},fill:{az:-45,el:10,d:2.5,pow:12,size:80},rim:{on:false}},
+  {n:'루프',key:{az:30,el:30,d:1.6,pow:70,size:45},fill:{az:-35,el:5,d:2.4,pow:18,size:85},rim:{az:160,el:35,d:1.8,pow:45,size:15}},
+  {n:'버터플라이',key:{az:0,el:45,d:1.4,pow:70,size:35},fill:{az:0,el:-25,d:1.1,pow:14,size:60},rim:{on:false}},
+  {n:'스플릿',key:{az:90,el:5,d:1.4,pow:70,size:25},fill:{on:false},rim:{on:false}},
+  {n:'클램쉘',key:{az:0,el:40,d:1.3,pow:65,size:70},fill:{az:0,el:-30,d:1.1,pow:30,size:70},rim:{az:180,el:35,d:1.8,pow:50,size:15}},
+  {n:'컬러 젤',key:{az:25,el:30,d:1.6,pow:50,size:50},fill:{az:-120,el:15,d:1.5,pow:65,size:15,col:'#3fa9ff'},rim:{az:120,el:15,d:1.5,pow:65,size:15,col:'#ff4fa0'}}
+];
+const GBASE={amb:12,exp:0,turn:0,tilt:0,bg:'#8c8a86',wallD:1.4,wallA:0,
+  cm:{on:true,az:0,dist:1.7,h:1.56,pan:0,tilt:0,f:85,Ni:4,fd:1.6,af:true,ar:'2:3',grid:'thirds',dc:false}};
+const STOPS=[1.2,1.4,1.8,2,2.8,4,5.6,8,11,16];
+const AR={'2:3':[2,3],'3:2':[3,2],'4:5':[4,5],'1:1':[1,1],'16:9':[16,9]};
+const GRIDS={off:'끔',thirds:'3분할',phi:'황금비',cross:'십자'};
+const CAMCTRL=[
+  ['f','렌즈',24,200,1,v=>`${v}mm`],
+  ['Ni','조리개',0,STOPS.length-1,1,i=>`f/${STOPS[i]}`],
+  ['fd','초점 거리',.3,6,.01,v=>`${(+v).toFixed(2)} m`],
+  ['h','카메라 높이',.3,2.4,.01,v=>`${(+v).toFixed(2)} m`],
+  ['dist','카메라 거리',.5,4.5,.05,v=>`${(+v).toFixed(2)} m`],
+  ['az','카메라 방향',-180,180,1,v=>`${v}°`]
+];
+
+const clone=o=>JSON.parse(JSON.stringify(o));
+function fresh(){const s={...clone(GBASE)};for(const k of LIGHTS)s[k]=clone(BASE[k]);return s}
+let st=fresh();
+try{const sv=JSON.parse(localStorage.getItem('litesim1')||'null');if(sv&&sv.key&&sv.fill&&sv.rim)st={...st,...sv,cm:{...st.cm,...(sv.cm||{})}}}catch(e){}
+let sel='key',pick3=null,mode=null;
+const save=()=>{try{localStorage.setItem('litesim1',JSON.stringify(st))}catch(e){}};
+
+const sizeM=s=>0.12+s/100*0.9;
+const sizeName=s=>s<15?'맨 플래시':s<40?'소형 소프트박스':s<70?'중형 소프트박스':'대형 옥타';
+const sizeLabel=v=>`${sizeName(v)} · ${Math.round(sizeM(v)*100)}cm`;
+const CTRL=[
+  ['az','방향',-180,180,1,v=>`${v}°`],
+  ['el','높이',-40,85,1,v=>`${v}°`],
+  ['d','거리',0.5,4,0.05,v=>`${(+v).toFixed(2)} m`],
+  ['pow','세기',0,100,1,v=>`${v}%`],
+  ['size','크기',0,100,1,sizeLabel]
+];
+const GCTRL=[
+  ['amb','주변광',0,100,1,v=>`${v}%`],
+  ['exp','노출',-2,2,0.1,v=>`${v>0?'+':''}${(+v).toFixed(1)} EV`],
+  ['turn','얼굴 방향',-90,90,1,v=>`${v}°`],
+  ['tilt','고개 숙임',-25,25,1,v=>`${v}°`],
+  ['wallD','배경지 거리',.4,4,.05,v=>`${(+v).toFixed(2)} m`],
+  ['wallA','배경지 각도',-60,60,1,v=>`${v}°`]
+];
+const rowHTML=(p,[k,t,mn,mx,stp])=>`<label class="row"><span>${t}</span><output id="o${p}${k}"></output><input type="range" id="${p}${k}" min="${mn}" max="${mx}" step="${stp}"></label>`;
+$('#lightCtrls').innerHTML=CTRL.map(c=>rowHTML('c-',c)).join('');
+$('#globalCtrls').innerHTML=GCTRL.map(c=>rowHTML('g-',c)).join('');
+$('#camCtrls').innerHTML=CAMCTRL.map(c=>rowHTML('k-',c)).join('');
+$('#presets').innerHTML=PRESETS.map((p,i)=>`<button data-p="${i}">${p.n}</button>`).join('');
+
+/* ---------- 3D ---------- */
+const view=$('#view');
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;
+renderer.physicallyCorrectLights=true;
+renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+view.prepend(renderer.domElement);
+
+const scene=new THREE.Scene();
+const cam=new THREE.PerspectiveCamera(32,1,0.05,50);
+const CAM0=new THREE.Vector3(0,1.56,1.25),CAM_TY=HEAD_Y-.06;
+cam.position.copy(CAM0);
+const controls=new THREE.OrbitControls(cam,renderer.domElement);
+controls.target.set(0,CAM_TY,0);controls.enableDamping=true;controls.minDistance=0.5;controls.maxDistance=7;controls.update();
+let dirty=true,lastChange=0;const req=()=>{dirty=true;lastChange=performance.now()};
+controls.addEventListener('change',req);
+
+const target=new THREE.Object3D();target.position.set(0,HEAD_Y,0);scene.add(target);
+const hemi=new THREE.HemisphereLight(0xffffff,0x555555,0.3);scene.add(hemi);
+
+const floorMat=new THREE.MeshStandardMaterial({color:st.bg,roughness:.95}),wallMat=new THREE.MeshStandardMaterial({color:st.bg,roughness:.95});
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(40,40),floorMat);floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+const wallG=new THREE.Group();scene.add(wallG);
+const wall=new THREE.Mesh(new THREE.PlaneGeometry(40,10),wallMat);wall.position.y=5;wall.receiveShadow=wall.castShadow=true;wallG.add(wall);
+const wallEdge=new THREE.Mesh(new THREE.BoxGeometry(40,.05,.05),new THREE.MeshBasicMaterial({toneMapped:false}));wallEdge.position.set(0,.02,.02);wallEdge.visible=false;wallG.add(wallEdge);
+
+const PIV=1.43,head=new THREE.Group(),body=new THREE.Group();head.position.y=PIV;head.rotation.order='YXZ';scene.add(head,body);
+const skinMat=new THREE.MeshStandardMaterial({color:0xd8cdc2,roughness:.6,side:THREE.DoubleSide});
+/* 얼굴: Lee Perry-Smith 헤드 스캔 (CC BY 3.0) */
+const normalMap=new THREE.TextureLoader().load(HEAD_NRM,req);
+const loadFail=e=>{$('#loading').textContent='얼굴 모델을 불러오지 못했어요: '+String(e&&e.message||e).slice(0,80)};
+try{
+const glb=Uint8Array.from(atob(HEAD_GLB),c=>c.charCodeAt(0)).buffer;
+new THREE.GLTFLoader().parse(glb,'',g=>{
+  const m=g.scene.getObjectByProperty('type','Mesh');
+  skinMat.normalMap=normalMap;skinMat.needsUpdate=true;m.material=skinMat;
+  m.castShadow=m.receiveShadow=true;
+  const wrap=new THREE.Group();wrap.add(m);
+  const b=new THREE.Box3().setFromObject(wrap),sz=b.getSize(new THREE.Vector3()),c=b.getCenter(new THREE.Vector3());
+  const s=BUST_H/sz.y;m.scale.multiplyScalar(s);m.position.sub(c.multiplyScalar(s));
+  const top=HEAD_Y+.125;wrap.position.set(0,top-BUST_H/2-PIV,0);head.add(wrap);
+  const bottom=top-BUST_H,pole=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,bottom,12),darkMat);
+  pole.position.y=bottom/2;pole.castShadow=true;body.add(pole);
+  const foot=new THREE.Mesh(new THREE.CylinderGeometry(.18,.2,.03,32),darkMat);foot.position.y=.015;foot.receiveShadow=true;body.add(foot);
+  $('#loading').remove();req();
+},loadFail);
+}catch(e){loadFail(e)}
+
+const darkMat=new THREE.MeshStandardMaterial({color:0x2a2a2c,roughness:.8});
+const L={};
+
+for(const k of LIGHTS){
+  const s=new THREE.SpotLight(0xffffff,1,0,Math.PI/5,.7,2);
+  s.castShadow=true;s.shadow.mapSize.set(1024,1024);s.shadow.bias=-.0004;s.shadow.normalBias=.01;
+  const aim=new THREE.Object3D();scene.add(aim);
+  s.shadow.camera.near=SHADOW_NEAR;s.shadow.camera.far=SHADOW_FAR;s.target=aim;scene.add(s);
+  const g=new THREE.Group();
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(1,1,.35),darkMat));
+  const faceMat=new THREE.MeshBasicMaterial({color:0xffffff});
+  const face=new THREE.Mesh(new THREE.PlaneGeometry(1,1),faceMat);face.position.z=.18;g.add(face);
+  scene.add(g);
+  const stand=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,1,8),darkMat);scene.add(stand);
+  const pick=new THREE.Mesh(new THREE.SphereGeometry(.25,12,8),new THREE.MeshBasicMaterial({visible:false}));scene.add(pick);
+  const shell=new THREE.Mesh(new THREE.BoxGeometry(1,1,.35),new THREE.MeshBasicMaterial({side:THREE.BackSide,toneMapped:false}));shell.visible=false;g.add(shell);
+  g.userData.k=pick.userData.k=k;
+  L[k]={s,g,faceMat,stand,pick,aim,shell};
+}
+
+function lightPos(p){
+  const az=p.az*D2R,el=p.el*D2R;
+  return new THREE.Vector3(Math.sin(az)*Math.cos(el)*p.d,HEAD_Y+Math.sin(el)*p.d,Math.cos(az)*Math.cos(el)*p.d);
+}
+function aimDir(p){
+  const d=target.position.clone().sub(lightPos(p)).normalize();
+  const yw=Math.atan2(d.x,d.z)+(p.yaw||0)*D2R,pt=Math.asin(d.y)+(p.pitch||0)*D2R;
+  return new THREE.Vector3(Math.sin(yw)*Math.cos(pt),Math.sin(pt),Math.cos(yw)*Math.cos(pt));
+}
+const aimPoint=p=>lightPos(p).add(aimDir(p).multiplyScalar(p.d));
+const intensity=p=>p.on?p.pow/100*13:0;
+
+function apply(){
+  for(const k of LIGHTS){
+    const p=st[k],o=L[k],pos=lightPos(p);
+    o.s.position.copy(pos);o.s.intensity=intensity(p);o.s.color.set(p.col);
+    o.s.shadow.radius=sizeM(p.size)/SHADOW_FW;  // PCSS: 조명 크기(그림자 맵 UV 단위)
+   o.s.penumbra=.3+p.size*.006;
+    const ap=aimPoint(p),sm=sizeM(p.size);o.aim.position.copy(ap);
+    o.g.position.copy(pos);o.g.scale.setScalar(sm);o.g.lookAt(ap);o.g.visible=p.on;o.pick.position.copy(pos);
+    o.shell.scale.setScalar(1+.06/sm);
+    o.faceMat.color.set(p.col);
+    o.stand.visible=p.on&&pos.y>.05;o.stand.scale.y=Math.max(pos.y,.01);o.stand.position.set(pos.x,pos.y/2,pos.z);
+  }
+  hemi.intensity=st.amb/100*2;
+  renderer.toneMappingExposure=2**st.exp;
+  head.rotation.y=st.turn*D2R;head.rotation.x=st.tilt*D2R;
+  floorMat.color.set(st.bg);wallMat.color.set(st.bg);
+  const wa=st.wallA*D2R;wallG.position.set(-Math.sin(wa)*st.wallD,0,-Math.cos(wa)*st.wallD);wallG.rotation.y=wa;
+  applyCam();
+  req();
+}
+/* ---------- 카메라 모드 ---------- */
+const camOn=()=>st.cm.on;
+function frameRect(){
+  const W=view.clientWidth||1,H=view.clientHeight||1,[aw,ah]=AR[st.cm.ar]||[2,3],a=aw/ah;
+  const fh=Math.min(H*.9,W*.94/a),fw=fh*a;return{x:(W-fw)/2,y:(H-fh)/2,w:fw,h:fh,W,H,aw,ah};
+}
+const camPos=()=>new THREE.Vector3(Math.sin(st.cm.az*D2R)*st.cm.dist,st.cm.h,Math.cos(st.cm.az*D2R)*st.cm.dist);
+function camYawPitch(){
+  const t=new THREE.Vector3(0,CAM_TY,0).sub(camPos()).normalize();
+  return[Math.atan2(t.x,t.z)-st.cm.pan*D2R,Math.asin(t.y)+st.cm.tilt*D2R];
+}
+function frameHalfTan(){ // 프레임 세로 반각 tan (풀프레임 대각 43.27mm 기준)
+  const fr=frameRect();return 43.27*fr.ah/Math.hypot(fr.aw,fr.ah)/2/st.cm.f;
+}
+function applyCam(){
+  if(!camOn())return;
+  const c=st.cm,fr=frameRect(),p=camPos(),[yw,pt]=camYawPitch();
+  cam.fov=2*Math.atan(frameHalfTan()*fr.H/fr.h*distScale())/D2R;cam.updateProjectionMatrix();
+  cam.position.copy(p);cam.up.set(0,1,0);
+  cam.lookAt(p.clone().add(new THREE.Vector3(Math.sin(yw)*Math.cos(pt),Math.sin(pt),Math.cos(yw)*Math.cos(pt))));cam.updateMatrixWorld();
+  if(c.af){ // 얼굴(눈 근처)까지의 거리에 초점
+    head.updateMatrixWorld();const eye=head.localToWorld(new THREE.Vector3(0,HEAD_Y+.03-PIV,.095)),fwd=new THREE.Vector3();
+    cam.getWorldDirection(fwd);c.fd=Math.round(clamp(eye.sub(p).dot(fwd),.3,6)*100)/100;
+  }
+}
+function drawOv(){
+  const ov=$('#ov'),info=$('#camInfo');ov.style.display=camOn()?'':'none';info.hidden=!camOn();if(!camOn())return;
+  const {x,y,w,h,W,H}=frameRect(),c=st.cm,f=n=>n.toFixed(1);
+  ov.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  let o=`<path class="ov-mask" fill-rule="evenodd" d="M0 0H${W}V${H}H0Z M${f(x)} ${f(y)}h${f(w)}v${f(h)}h${f(-w)}Z"/><rect class="ov-frame" x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}"/>`;
+  const fr={thirds:[1/3,2/3],phi:[.382,.618]}[c.grid]||[];
+  for(const t of fr)o+=`<line class="ov-grid" x1="${f(x+w*t)}" y1="${f(y)}" x2="${f(x+w*t)}" y2="${f(y+h)}"/><line class="ov-grid" x1="${f(x)}" y1="${f(y+h*t)}" x2="${f(x+w)}" y2="${f(y+h*t)}"/>`;
+  if(c.grid==='cross'){const cx=x+w/2,cy=y+h/2;o+=`<line class="ov-grid" x1="${f(cx-14)}" y1="${f(cy)}" x2="${f(cx+14)}" y2="${f(cy)}"/><line class="ov-grid" x1="${f(cx)}" y1="${f(cy-14)}" x2="${f(cx)}" y2="${f(cy+14)}"/>`}
+  ov.innerHTML=o;
+  info.style.left=(x+w/2)+'px';info.style.top=(y+h-8)+'px';
+  info.textContent=`${c.f}mm · f/${STOPS[c.Ni]} · 초점 ${c.fd.toFixed(2)}m${c.af?' (얼굴 AF)':' (MF)'} · ${c.ar}`;
+}
+function setCamMode(on){
+  st.cm.on=on;controls.enabled=!on;
+  if(!on){cam.fov=32;cam.updateProjectionMatrix()}
+  $('#camReset').setAttribute('aria-pressed',on);$('#camWide').setAttribute('aria-pressed',!on);
+  $('#hint').textContent=on?'끌기: 카메라 방향 · 핀치/휠: 줌 · 탭: 초점 맞추기 / 조명 메뉴':'조명 탭: 메뉴 · 빈 곳 드래그: 시점 회전';
+  update();
+}
+
+function resize(){
+  const w=view.clientWidth,h=view.clientHeight;if(!w||!h)return;
+  renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();if(rtF)makeRT();applyCam();drawOv();req();
+}
+const ro=new ResizeObserver(resize);ro.observe(view);
+/* ---------- 멈추면 다듬기: 소프트박스 면 위 여러 지점 + 카메라 서브픽셀을 흔들며 프레임을 평균 ---------- */
+const RN=64,RSHOW=8,IDLE_MS=300;
+const quadCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1),quadScene=new THREE.Scene();
+const quadVS='varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}';
+const blendMat=new THREE.ShaderMaterial({uniforms:{tAcc:{value:null},tNew:{value:null},w:{value:1}},vertexShader:quadVS,toneMapped:false,depthTest:false,
+  fragmentShader:'uniform sampler2D tAcc,tNew;uniform float w;varying vec2 vUv;void main(){gl_FragColor=mix(texture2D(tAcc,vUv),texture2D(tNew,vUv),w);}'});
+const copyMat=new THREE.ShaderMaterial({uniforms:{t:{value:null}},vertexShader:quadVS,toneMapped:false,depthTest:false,
+  fragmentShader:'uniform sampler2D t;varying vec2 vUv;void main(){gl_FragColor=texture2D(t,vUv);}'});
+const quad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),blendMat);quadScene.add(quad);
+const gl=renderer.getContext(),isGL2=renderer.capabilities.isWebGL2;
+const halfOK=isGL2?!!(gl.getExtension('EXT_color_buffer_float')||gl.getExtension('EXT_color_buffer_half_float')):!!(gl.getExtension('OES_texture_half_float')&&gl.getExtension('EXT_color_buffer_half_float'));
+let rtF=null,rtA=null,rtB=null,rk=0,perm={};
+// 렌즈 왜곡: 양수=술통형(광각), 음수=실패형(망원). 대략적인 렌즈 평균값
+function distK(){
+  if(!camOn()||st.cm.dc)return 0;const f=st.cm.f;
+  return f<50?.07*(50-f)/26:-.015*Math.min(1,(f-50)/150);
+}
+const distMat=new THREE.ShaderMaterial({uniforms:{t:{value:null},K:{value:0},S:{value:1},res:{value:new THREE.Vector2()},R2:{value:1}},vertexShader:quadVS,toneMapped:false,depthTest:false,
+  fragmentShader:'uniform sampler2D t;uniform float K,R2,S;uniform vec2 res;varying vec2 vUv;void main(){vec2 p=(vUv-.5)*res;vec2 s=.5+(vUv-.5)*(1.+K*dot(p,p)/R2)/S;gl_FragColor=(s.x<0.||s.y<0.||s.x>1.||s.y>1.)?vec4(0,0,0,1):texture2D(t,s);}'});
+function distParams(){
+  const v=renderer.getDrawingBufferSize(new THREE.Vector2()),fr=frameRect(),k=v.x/fr.W;
+  return{res:v,R2:Math.pow(Math.hypot(fr.w,fr.h)*k/2,2)};
+}
+function distScale(){ // 술통형일 때 모서리까지 채우도록 원본을 조금 넓게 렌더
+  const K=distK();if(K<=0)return 1;const d=distParams();return 1+K*(d.res.x*d.res.x+d.res.y*d.res.y)/4/d.R2;
+}
+function showTex(tex){ // 화면에 표시 (카메라 모드면 렌즈 왜곡 적용)
+  const K=distK();let m=copyMat;
+  if(K){const d=distParams();m=distMat;Object.assign(m.uniforms.res.value,{x:d.res.x,y:d.res.y});m.uniforms.R2.value=d.R2;m.uniforms.K.value=K;m.uniforms.S.value=distScale();m.uniforms.t.value=tex}
+  else copyMat.uniforms.t.value=tex;
+  quad.material=m;renderer.setRenderTarget(null);renderer.render(quadScene,quadCam);
+}
+let rtL=null;
+function renderLive(){
+  if(!distK()){renderer.setRenderTarget(null);renderer.render(scene,cam);return}
+  if(!rtL)makeRT();
+  renderer.setRenderTarget(rtL);renderer.render(scene,cam);showTex(rtL.texture);
+}
+function makeRT(){
+  const v=renderer.getDrawingBufferSize(new THREE.Vector2());
+  for(const r of[rtF,rtA,rtB,rtL])r&&r.dispose();
+  rtL=isGL2?new THREE.WebGLMultisampleRenderTarget(v.x,v.y,{encoding:THREE.sRGBEncoding}):new THREE.WebGLRenderTarget(v.x,v.y,{encoding:THREE.sRGBEncoding});
+  rtF=new THREE.WebGLRenderTarget(v.x,v.y,{encoding:THREE.sRGBEncoding});
+  const o={type:halfOK?THREE.HalfFloatType:THREE.UnsignedByteType,depthBuffer:false};
+  rtA=new THREE.WebGLRenderTarget(v.x,v.y,o);rtB=new THREE.WebGLRenderTarget(v.x,v.y,o);
+}
+const halton=(i,b)=>{let f=1,r=0;while(i>0){f/=b;r+=f*(i%b);i=Math.floor(i/b)}return r};
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const X=new THREE.Vector3(),Y=new THREE.Vector3(),Z=new THREE.Vector3();
+function refineStep(){
+  if(!rtF||!rtA)makeRT();
+  if(rk===0)for(const k of LIGHTS)perm[k]=shuffle([...Array(RN).keys()]);
+  const v=renderer.getDrawingBufferSize(new THREE.Vector2());
+  let ox=halton(rk+1,2)-.5,oy=halton(rk+1,3)-.5,camSave=null;
+  if(camOn()){ // 조리개 원판 위에서 카메라를 옮기고, 초점면은 그대로 두도록 화면을 반대로 밀기
+    const R=(st.cm.f/1000)/(2*STOPS[st.cm.Ni]),r=Math.sqrt(halton(rk+1,5))*R,t=halton(rk+1,7)*Math.PI*2,dx=r*Math.cos(t),dy=r*Math.sin(t);
+    cam.matrixWorld.extractBasis(X,Y,Z);camSave=cam.position.clone();
+    cam.position.addScaledVector(X,dx).addScaledVector(Y,dy);cam.updateMatrixWorld();
+    const ppu=(v.y/2)/(st.cm.fd*Math.tan(cam.fov*D2R/2));ox-=dx*ppu;oy+=dy*ppu;
+  }
+  cam.setViewOffset(v.x,v.y,ox,oy,v.x,v.y);
+  for(const k of LIGHTS){ // 소프트박스 면을 8×8 칸으로 나눠 한 칸씩 무작위 순서로
+    const o=L[k],sm=sizeM(st[k].size),c=perm[k][rk],n=Math.sqrt(RN);
+    o.g.matrixWorld.extractBasis(X,Y,Z);X.normalize();Y.normalize();
+    const u=((c%n)+Math.random())/n-.5,w=(Math.floor(c/n)+Math.random())/n-.5;
+    o.s.position.copy(o.g.position).addScaledVector(X,u*sm).addScaledVector(Y,w*sm);
+    o.s.shadow.radius=sm*.12/SHADOW_FW;
+  }
+  renderer.setRenderTarget(rtF);renderer.render(scene,cam);
+  cam.clearViewOffset();if(camSave){cam.position.copy(camSave);cam.updateMatrixWorld()}
+  for(const k of LIGHTS){const o=L[k];o.s.position.copy(o.g.position);o.s.shadow.radius=sizeM(st[k].size)/SHADOW_FW}
+  blendMat.uniforms.tAcc.value=rtA.texture;blendMat.uniforms.tNew.value=rtF.texture;blendMat.uniforms.w.value=1/(rk+1);
+  quad.material=blendMat;renderer.setRenderTarget(rtB);renderer.render(quadScene,quadCam);
+  [rtA,rtB]=[rtB,rtA];rk++;
+  if(rk>=RSHOW)showTex(rtA.texture);
+  const r=$('#refine');r.hidden=rk>=RN;r.textContent=`다듬는 중 ${Math.round(rk/RN*100)}%`;
+}
+(function loop(){
+  requestAnimationFrame(loop);
+  if(!camOn()&&controls.update())req();
+  if(dirty){
+    renderLive();dirty=false;rk=0;$('#refine').hidden=true;
+    if(pick3)placeCtx();
+  }else if(rk<RN&&!gs&&performance.now()-lastChange>IDLE_MS)refineStep();
+})();
+const setCam=(p,ty)=>{ // 남아 있는 회전 관성을 먼저 없앤 뒤 이동
+  controls.enableDamping=false;controls.update();
+  cam.position.copy(p);controls.target.set(0,ty,0);controls.update();
+  controls.enableDamping=true;req();
+};
+function openQ(on){
+  const q=$('#qcam');q.hidden=!on;$('#camReset').textContent=on?'카메라 ▴':'카메라';
+  if(on){if(pick3)closeCtx();q.style.top=(document.querySelector('.hud').offsetHeight+18)+'px';q.style.right='12px';syncOutputs()}
+}
+$('#camReset').onclick=()=>{if(!camOn()){setCamMode(true);openQ(true)}else openQ($('#qcam').hidden)};
+$('#qcam').addEventListener('click',e=>{
+  const t=e.target,c=st.cm;let b;
+  if(t.closest('#qClose'))return openQ(false);
+  if(b=t.closest('[data-qf]'))c.f=+b.dataset.qf;
+  else if(b=t.closest('[data-qn]'))c.Ni=+b.dataset.qn;
+  else if(b=t.closest('[data-ar]'))c.ar=b.dataset.ar;
+  else if(b=t.closest('[data-grid]'))c.grid=b.dataset.grid;
+  else if(t.closest('#qAF'))c.af=!c.af;
+  else return;
+  update();
+});
+$('#qcam').addEventListener('input',e=>{
+  const id=e.target.id,c=st.cm;
+  if(id==='q-f')c.f=+e.target.value;else if(id==='q-fd'){c.fd=+e.target.value;c.af=false}else if(id==='q-dc')c.dc=e.target.checked;else return;
+  update();
+});
+$('#camWide').onclick=()=>{setCamMode(false);openQ(false);const k=Math.max(1,1.3/cam.aspect);setCam(new THREE.Vector3(2.6*k,1.45+1.45*k,3.8*k),1.45)};
+
+/* ---------- 배치도 ---------- */
+const map=$('#map');
+function drawMap(){
+  let h='';
+  for(let r=1;r<=4;r++)h+=`<circle class="ring" r="${r}"/><text class="rl" x="${(r*.707+.05).toFixed(2)}" y="${(-r*.707).toFixed(2)}">${r}m</text>`;
+  {const wa=st.wallA*D2R,cx=-Math.sin(wa)*st.wallD,cz=-Math.cos(wa)*st.wallD,ux=Math.cos(wa),uz=-Math.sin(wa),f=n=>n.toFixed(3);
+   h+=`<line class="wall" x1="${f(cx-ux*7)}" y1="${f(cz-uz*7)}" x2="${f(cx+ux*7)}" y2="${f(cz+uz*7)}"/><text class="rl" x="${f(cx-ux*1.2-Math.sin(wa)*.12)}" y="${f(cz-uz*1.2-Math.cos(wa)*.12)}">배경지</text>`}
+  {const cp=camPos(),[yw]=camYawPitch(),fr=frameRect(),hh=Math.atan(frameHalfTan()*fr.aw/fr.ah),f=n=>n.toFixed(3);
+   for(const s of[-1,1])h+=`<line class="fov" x1="${f(cp.x)}" y1="${f(cp.z)}" x2="${f(cp.x+Math.sin(yw+s*hh)*6)}" y2="${f(cp.z+Math.cos(yw+s*hh)*6)}"/>`;
+   h+=`<g transform="translate(${f(cp.x)} ${f(cp.z)}) rotate(${(180-yw/D2R).toFixed(1)})"><rect class="camg" x="-.22" y="-.12" width=".44" height=".28" rx=".05"/><rect class="camg" x="-.1" y="-.24" width=".2" height=".14"/><circle data-cam="1" r=".38" fill="transparent" style="cursor:grab"/></g><text class="rl" x="${f(cp.x+.32)}" y="${f(cp.z+.3)}">카메라</text>`}
+  h+=`<g transform="rotate(${-st.turn})"><ellipse class="subj" rx=".2" ry=".24"/><path class="camg" d="M-.06 .22 L0 .34 L.06 .22Z"/></g>`;
+  for(const k of LIGHTS){
+    const p=st[k],dh=p.d*Math.cos(p.el*D2R),az=p.az*D2R,x=Math.sin(az)*dh,y=Math.cos(az)*dh,w=sizeM(p.size),ap=aimPoint(p);
+    h+=`<g class="${p.on?'':'off'}"><line class="beam" x1="${ap.x.toFixed(3)}" y1="${ap.z.toFixed(3)}" x2="${x.toFixed(3)}" y2="${y.toFixed(3)}"/>`+
+       `<g transform="translate(${x.toFixed(3)} ${y.toFixed(3)}) rotate(${-(p.az+(p.yaw||0))})"><rect class="box" x="${(-w/2).toFixed(3)}" y="-.06" width="${w.toFixed(3)}" height=".12" rx=".03"/></g>`+
+       `<circle data-k="${k}" class="h${k===sel?' sel':''}" cx="${x.toFixed(3)}" cy="${y.toFixed(3)}" r=".3" fill="${p.col}"/>`+
+       `<text class="ht" x="${x.toFixed(3)}" y="${y.toFixed(3)}">${NAME[k]}</text></g>`;
+  }
+  map.innerHTML=h;
+}
+function svgPt(e){const pt=map.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;return pt.matrixTransform(map.getScreenCTM().inverse())}
+let drag=null;
+map.addEventListener('pointerdown',e=>{
+  const c=e.target.closest('[data-k],[data-cam]');if(!c)return;
+  if(c.dataset.cam)drag='cam';else{drag=c.dataset.k;if(sel!==drag){sel=drag;syncUI()}}
+  map.setPointerCapture(e.pointerId);e.preventDefault();
+});
+map.addEventListener('pointermove',e=>{
+  if(!drag)return;
+  if(drag==='cam'){const q=svgPt(e);st.cm.az=Math.round(Math.atan2(q.x,q.y)/D2R);st.cm.dist=Math.round(clamp(Math.hypot(q.x,q.y),.5,4.5)*20)/20;update(false);return}
+  const p=st[drag],q=svgPt(e);
+  const dh=Math.hypot(q.x,q.y),ce=Math.cos(p.el*D2R);
+  p.az=Math.round(Math.atan2(q.x,q.y)/D2R);
+  p.d=Math.round(Math.min(4,Math.max(.5,dh/Math.max(ce,.1)))*20)/20;
+  update(false);
+});
+const endDrag=()=>{if(drag){drag=null;save()}};
+map.addEventListener('pointerup',endDrag);map.addEventListener('pointercancel',endDrag);
+
+/* ---------- UI ---------- */
+function syncOutputs(){
+  for(const [k,,,,,f] of CTRL){$('#c-'+k).value=st[sel][k];$('#oc-'+k).textContent=f(st[sel][k])}
+  for(const [k,,,,,f] of GCTRL){$('#g-'+k).value=st[k];$('#og-'+k).textContent=f(st[k])}
+  for(const [k,,,,,f] of CAMCTRL){$('#k-'+k).value=st.cm[k];$('#ok-'+k).textContent=f(st.cm[k])}
+  $('#af').checked=st.cm.af;$('#dc').checked=st.cm.dc;
+  {const c=st.cm,pr=(on)=>`aria-pressed="${on}"`;
+   $('#q-f').value=c.f;$('#oq-f').textContent=c.f+'mm';$('#q-fd').value=c.fd;$('#oq-fd').textContent=c.fd.toFixed(2)+' m'+(c.af?' · 얼굴 AF':' · MF');
+   $('#oq-Ni').textContent='f/'+STOPS[c.Ni];$('#q-dc').checked=c.dc;$('#qAF').setAttribute('aria-pressed',c.af);
+   $('#qF').innerHTML=[24,35,50,85,135,200].map(f=>`<button data-qf="${f}" ${pr(c.f===f)}>${f}</button>`).join('');
+   $('#qN').innerHTML=[1.4,2,2.8,4,5.6,8,11].map(n=>`<button data-qn="${STOPS.indexOf(n)}" ${pr(STOPS[c.Ni]===n)}>f/${n}</button>`).join('');
+   $('#qAR').innerHTML=Object.keys(AR).map(a=>`<button data-ar="${a}" ${pr(c.ar===a)}>${a}</button>`).join('');
+   $('#qGrid').innerHTML=Object.entries(GRIDS).map(([g,n])=>`<button data-grid="${g}" ${pr(c.grid===g)}>${n}</button>`).join('');}
+  $('#arSeg').innerHTML=Object.keys(AR).map(a=>`<button data-ar="${a}" aria-pressed="${st.cm.ar===a}">${a}</button>`).join('');
+  $('#gridSeg').innerHTML=Object.entries(GRIDS).map(([g,n])=>`<button data-grid="${g}" aria-pressed="${st.cm.grid===g}">${n}</button>`).join('');
+  drawOv();
+  if(pick3==='wall')$('#w-col').value=st.bg;
+  else if(LIGHTS.includes(pick3)){const p=st[pick3];$('#a-pow').value=p.pow;$('#oa-pow').textContent=p.pow+'%';$('#a-size').value=p.size;$('#oa-size').textContent=sizeLabel(p.size);$('#a-col').value=p.col;$('#a-on').checked=p.on}
+}
+function syncUI(){
+  $('#tabs').innerHTML=LIGHTS.map(k=>`<button data-k="${k}" aria-pressed="${k===sel}" class="${st[k].on?'':'dim'}">${NAME[k]}${st[k].on?'':' (꺼짐)'}</button>`).join('');
+  $('#on').checked=st[sel].on;$('#col').value=st[sel].col;$('#bg').value=st.bg;
+  syncOutputs();drawMap();
+}
+function ratio(){
+  const E=p=>intensity(p)/(p.d*p.d),k=st.key,f=st.fill,el=$('#ratio');
+  if(!k.on||!f.on||intensity(f)===0||intensity(k)===0){el.textContent='키:필 — (둘 다 켜야 계산)';return}
+  const r=(E(k)+E(f))/E(f);
+  el.textContent=`키:필 ${r.toFixed(1)}:1 · ${Math.log2(r).toFixed(1)}스톱`;
+}
+function update(saveNow=true){apply();syncOutputs();drawMap();ratio();if(saveNow)save()}
+
+$('#mqBtn').onclick=()=>{if(pick3==='mq')closeCtx();else{mode='rot';openCtx('mq')}};
+$('#wallBtn').onclick=()=>{if(isWall())closeCtx();else{mode=null;openCtx('wall')}};
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('[data-k]');if(b){sel=b.dataset.k;syncUI()}});
+document.querySelector('.panel').addEventListener('input',e=>{
+  const id=e.target.id;
+  if(id.startsWith('c-'))st[sel][id.slice(2)]=+e.target.value;
+  else if(id.startsWith('g-'))st[id.slice(2)]=+e.target.value;
+  else if(id.startsWith('k-')){st.cm[id.slice(2)]=+e.target.value;if(id==='k-fd')st.cm.af=false}
+  else if(id==='af')st.cm.af=e.target.checked;
+  else if(id==='dc')st.cm.dc=e.target.checked;
+  else if(id==='on'){st[sel].on=e.target.checked;syncUI()}
+  else if(id==='col')st[sel].col=e.target.value;
+  else if(id==='bg')st.bg=e.target.value;
+  else return;
+  update();
+});
+$('#presets').addEventListener('click',e=>{
+  const b=e.target.closest('[data-p]');if(!b)return;const pr=PRESETS[+b.dataset.p];
+  for(const k of LIGHTS)st[k]={...clone(BASE[k]),on:true,col:'#ffffff',...(pr[k]||{})};
+  syncUI();update();
+});
+$('#arSeg').addEventListener('click',e=>{const b=e.target.closest('[data-ar]');if(b){st.cm.ar=b.dataset.ar;update()}});
+$('#gridSeg').addEventListener('click',e=>{const b=e.target.closest('[data-grid]');if(b){st.cm.grid=b.dataset.grid;update()}});
+$('#reset').onclick=()=>{st=fresh();sel='key';syncUI();update()};
+
+/* ---------- 3D 화면: 조명 탭 → 메뉴(이동/회전/조절) ---------- */
+const MODE={
+  move:{c:'#ff3d7f',tip:'화면 아무 곳이나 끌면 피사체 주위를 돌아요 · 핀치/휠: 거리'},
+  rot:{c:'#2f7bff',tip:'끌면 조명이 비추는 방향이 바뀌어요'},
+  adj:{c:'#ffd21f',tip:''}
+};
+const WALLTIP={move:'위로 끌면 멀어지고 아래로 끌면 가까워져요 · 핀치/휠도 돼요',rot:'좌우로 끌면 배경지 각도가 바뀌어요'};
+const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const clampD=d=>Math.round(clamp(d,.5,4)*20)/20,clampW=d=>Math.round(clamp(d,.4,4)*20)/20;
+const wrapA=a=>((a+540)%360)-180;
+function setRay(e){
+  const r=renderer.domElement.getBoundingClientRect();let u=(e.clientX-r.left)/r.width,v=1-(e.clientY-r.top)/r.height;
+  const K=distK();if(K){const d=distParams(),px=(u-.5)*d.res.x,py=(v-.5)*d.res.y,m=(1+K*(px*px+py*py)/d.R2)/distScale();u=.5+(u-.5)*m;v=.5+(v-.5)*m}
+  ndc.set(u*2-1,v*2-1);ray.setFromCamera(ndc,cam);
+}
+wall.userData.k='wall';
+function hitLight(e){ // 조명 > 마네킹/바닥 > 벽 순서로 맞은 대상
+  setRay(e);const objs=[floor,head,body,wall];for(const k of LIGHTS)if(st[k].on)objs.push(L[k].pick,L[k].g);
+  const h=ray.intersectObjects(objs,true)[0];let o=h&&h.object;while(o&&!o.userData.k)o=o.parent;return o?o.userData.k:null;
+}
+const isWall=()=>pick3==='wall',isMq=()=>pick3==='mq',isLight=()=>LIGHTS.includes(pick3);
+const dragging=()=>pick3&&(mode==='move'||mode==='rot');
+
+function glow(){
+  for(const k of LIGHTS){
+    const o=L[k],on=k===pick3&&st[k].on;o.shell.visible=on;
+    if(on){const c=mode?MODE[mode].c:'#ffffff';o.shell.material.color.set(c)}
+  }
+  wallEdge.visible=isWall();wallMat.emissive.set(isWall()?(mode?MODE[mode].c:'#ffffff'):'#000000');wallMat.emissiveIntensity=.03;
+  if(isWall())wallEdge.material.color.set(mode?MODE[mode].c:'#ffffff');
+  skinMat.emissive.set(isMq()?MODE.rot.c:'#000000');skinMat.emissiveIntensity=.08;
+  req();
+}
+function renderCtx(){
+  const m=$('#ctx');m.hidden=!pick3;controls.enabled=!dragging()&&!camOn();
+  if(!pick3){glow();return}
+  $('#ctxName').textContent=isWall()?'배경지':isMq()?'마네킹':NAME[pick3]+' 조명';
+  for(const b of m.querySelectorAll('[data-m]'))b.hidden=isMq()&&b.dataset.m!=='rot';
+  for(const b of m.querySelectorAll('[data-m]'))b.setAttribute('aria-pressed',b.dataset.m===mode);
+  $('#ctxAdj').hidden=mode!=='adj'||!isLight();$('#ctxWall').hidden=mode!=='adj'||!isWall();$('#aimReset').hidden=mode!=='rot';
+  $('#aimReset').textContent=!isLight()?'정면으로 되돌리기':'피사체 쪽으로 다시 겨누기';
+  $('#ctxTip').textContent=!mode?'모드를 골라주세요':isWall()?WALLTIP[mode]||'':isMq()?'좌우로 끌면 얼굴이 돌아가고, 위아래로 끌면 고개를 숙이거나 들어요':MODE[mode].tip;$('#ctxTip').hidden=mode==='adj';
+  syncOutputs();glow();placeCtx();
+}
+function openCtx(k){openQ(false);pick3=k;if(LIGHTS.includes(k)&&sel!==k){sel=k;syncUI()}renderCtx()}
+function closeCtx(){pick3=null;mode=null;renderCtx()}
+function placeCtx(){
+  const m=$('#ctx'),W=view.clientWidth,H=view.clientHeight,w=m.offsetWidth,h=m.offsetHeight;
+  const v=!isLight()?new THREE.Vector3(9,9,9):L[pick3].g.position.clone().project(cam);let x,y;
+  if(v.z>1||Math.abs(v.x)>1||Math.abs(v.y)>1){x=(W-w)/2;y=H-h-34}  // 조명이 화면 밖이면 아래쪽에 고정
+  else{const px=(v.x+1)/2*W,py=(1-v.y)/2*H;x=px+44+w<W?px+44:px-44-w;y=py-h/2}
+  m.style.left=clamp(x,8,W-w-8)+'px';m.style.top=clamp(y,56,H-h-30)+'px';
+}
+$('#ctx').addEventListener('click',e=>{
+  const b=e.target.closest('[data-m]');
+  if(b){mode=mode===b.dataset.m?null:b.dataset.m;renderCtx();return}
+  if(e.target.closest('#ctxClose'))closeCtx();
+  if(e.target.closest('#aimReset')){if(isWall())st.wallA=0;else if(isMq()){st.turn=0;st.tilt=0}else{st[pick3].yaw=0;st[pick3].pitch=0}update()}
+});
+$('#ctx').addEventListener('input',e=>{
+  if(e.target.id==='w-col'){st.bg=e.target.value;update();return}
+  const p=st[pick3],id=e.target.id;if(!p)return;
+  if(id==='a-pow')p.pow=+e.target.value;else if(id==='a-size')p.size=+e.target.value;
+  else if(id==='a-col')p.col=e.target.value;else if(id==='a-on'){p.on=e.target.checked;syncUI();glow()}
+  else return;
+  update();
+});
+
+// 화면 끌기 방향과 조명 움직임 방향을 맞추기 위한 부호
+function screenSign(){
+  const p=st[pick3],q={...p},sx=v=>v.project(cam).x;
+  if(mode==='move'){q.az+=5;return sx(lightPos(q))>=sx(lightPos(p))?1:-1}
+  q.yaw=(q.yaw||0)+5;return sx(aimPoint(q))>=sx(aimPoint(p))?1:-1;
+}
+const ptrs=new Map();let gs=null;
+view.addEventListener('pointerdown',e=>{
+  if(e.target!==renderer.domElement)return;
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===1){
+    gs={id:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now(),moved:false,pinch:0};
+    if(camOn()&&!dragging())gs.cam={pan:st.cm.pan,tilt:st.cm.tilt,f:st.cm.f};
+    if(dragging())Object.assign(gs,isMq()?{p:{turn:st.turn,tilt:st.tilt}}:isWall()?{p:{wallD:st.wallD,wallA:st.wallA},sx:cam.position.z>=0?1:-1}:{p:{...st[pick3]},sx:screenSign()});
+  }else if(ptrs.size===2&&gs&&gs.cam){
+    const[a,b]=[...ptrs.values()];gs.pinch=Math.hypot(a.x-b.x,a.y-b.y);gs.f0=st.cm.f;gs.moved=true;
+  }else if(ptrs.size===2&&gs&&dragging()&&mode==='move'&&!isMq()){
+    const[a,b]=[...ptrs.values()];gs.pinch=Math.hypot(a.x-b.x,a.y-b.y);gs.d=isWall()?st.wallD:st[pick3].d;gs.moved=true;
+  }
+  if(dragging()||camOn()){e.stopPropagation();e.preventDefault();try{view.setPointerCapture(e.pointerId)}catch(_){}}
+},true);
+view.addEventListener('pointermove',e=>{
+  if(!gs||!ptrs.has(e.pointerId))return;
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  const dx=e.clientX-gs.x,dy=e.clientY-gs.y;
+  if(e.pointerId===gs.id&&Math.hypot(dx,dy)>6)gs.moved=true;
+  if(gs.cam&&!dragging()){ // 카메라 방향(팬/틸트)·줌
+    if(ptrs.size>=2&&gs.pinch){const[a,b]=[...ptrs.values()];st.cm.f=Math.round(clamp(gs.f0*Math.hypot(a.x-b.x,a.y-b.y)/gs.pinch,24,200))}
+    else if(e.pointerId===gs.id){const dpp=cam.fov/view.clientHeight;st.cm.pan=clamp(gs.cam.pan-dx*dpp,-60,60);st.cm.tilt=clamp(gs.cam.tilt+dy*dpp,-45,45)}
+    else return;
+    update(false);return;
+  }
+  if(!dragging()||!gs.p)return;
+  if(isMq()){
+    if(e.pointerId!==gs.id)return;
+    st.turn=Math.round(clamp(gs.p.turn+dx*.4,-90,90));st.tilt=Math.round(clamp(gs.p.tilt+dy*.2,-25,25));
+    update(false);return;
+  }
+  if(isWall()){
+    if(ptrs.size>=2&&gs.pinch){const[a,b]=[...ptrs.values()];st.wallD=clampW(gs.d*gs.pinch/Math.max(Math.hypot(a.x-b.x,a.y-b.y),1))}
+    else if(e.pointerId!==gs.id)return;
+    else if(mode==='move')st.wallD=clampW(gs.p.wallD-dy*.01);
+    else st.wallA=Math.round(clamp(gs.p.wallA-gs.sx*dx*.25,-60,60));
+    update(false);return;
+  }
+  const p=st[pick3];
+  if(ptrs.size>=2&&gs.pinch){const[a,b]=[...ptrs.values()];p.d=clampD(gs.d*gs.pinch/Math.max(Math.hypot(a.x-b.x,a.y-b.y),1))}
+  else if(e.pointerId===gs.id){
+    if(mode==='move'){p.az=Math.round(wrapA(gs.p.az+gs.sx*dx*.35));p.el=Math.round(clamp(gs.p.el-dy*.35,-40,85))}
+    else{p.yaw=Math.round(clamp((gs.p.yaw||0)+gs.sx*dx*.25,-60,60));p.pitch=Math.round(clamp((gs.p.pitch||0)-dy*.25,-60,60))}
+  }else return;
+  update(false);
+},true);
+function endPtr(e,cancel){
+  if(!ptrs.has(e.pointerId))return;ptrs.delete(e.pointerId);
+  if(!gs)return;
+  if(e.pointerId!==gs.id){gs.pinch=0;return}
+  const tap=!cancel&&!gs.moved&&performance.now()-gs.t<600;
+  if(tap){
+    const k=hitLight(e);
+    if(k&&k!=='wall')openCtx(k);                  // 조명
+    else if(pick3)closeCtx();                     // 그 외 탭 → 닫기
+    else if(camOn())focusAt(e);                   // 카메라 모드: 탭한 곳에 초점
+  }
+  else if(dragging()||gs.cam)save();
+  gs=null;ptrs.clear();
+}
+view.addEventListener('pointerup',e=>endPtr(e,false),true);
+view.addEventListener('pointercancel',e=>endPtr(e,true),true);
+function focusAt(e){
+  setRay(e);const h=ray.intersectObjects([head,body,wall,floor],true)[0];if(!h)return;
+  const fwd=new THREE.Vector3();cam.getWorldDirection(fwd);
+  st.cm.fd=Math.round(clamp(h.point.clone().sub(cam.position).dot(fwd),.3,6)*100)/100;st.cm.af=false;
+  const r=view.getBoundingClientRect(),fb=$('#focusBox');fb.style.left=(e.clientX-r.left)+'px';fb.style.top=(e.clientY-r.top)+'px';fb.hidden=false;
+  clearTimeout(focusAt.t);focusAt.t=setTimeout(()=>fb.hidden=true,900);
+  update();
+}
+view.addEventListener('wheel',e=>{ // 카메라 모드 휠 → 줌
+  if(e.target!==renderer.domElement||!camOn()||(pick3&&mode==='move'))return;
+  e.preventDefault();e.stopPropagation();st.cm.f=Math.round(clamp(st.cm.f*(1-e.deltaY*.001),24,200));update();
+},{capture:true,passive:false});
+view.addEventListener('wheel',e=>{ // 이동 모드에서 휠 → 조명 거리
+  if(!(pick3&&mode==='move')||isMq())return;
+  e.preventDefault();e.stopPropagation();const f=1+e.deltaY*.001;if(isWall())st.wallD=clampW(st.wallD*f);else st[pick3].d=clampD(st[pick3].d*f);update();
+},{capture:true,passive:false});
+$('#tabs').addEventListener('click',()=>{if(isLight()&&pick3!==sel){pick3=sel;renderCtx()}});
+
+setCamMode(st.cm.on);syncUI();update(false);ratio();
+}
+</script>
+</body>
+</html>
