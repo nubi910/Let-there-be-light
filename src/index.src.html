@@ -543,18 +543,24 @@ function buildPhotoBg(){ // 인물(잘라낸 부분)을 지우고 주변 색으�
   const cut=st.ph.cut/100;if(cut<=0)return;
   const im=PH.img,sc=Math.min(1,1024/Math.max(im.width,im.height)),w=Math.round(im.width*sc),h=Math.round(im.height*sc);
   const cv=document.createElement('canvas');cv.width=w;cv.height=h;const g=cv.getContext('2d');g.drawImage(im,0,0,w,h);
-  const P=g.getImageData(0,0,w,h),q=P.data,{W,H,depth:d}=PH,m=Math.max(0,cut-.04); // 인물 윤곽이 배경에 남지 않게 조금 넓게
+  const P=g.getImageData(0,0,w,h),q=P.data,{W,H,depth:d}=PH;
+  // 인물 자리 + 둘레를 넓게 비움 (머리카락 끝 같은 윤곽이 배경에 유령처럼 남지 않게)
+  let hole=new Uint8Array(w*h);for(let y=0;y<h;y++)for(let x=0;x<w;x++)hole[y*w+x]=d[Math.min(H-1,Math.floor(y/h*H))*W+Math.min(W-1,Math.floor(x/w*W))]>=cut-.04?1:0;
+  const R=Math.round(Math.max(w,h)*.02),grow=(a,dx,dy)=>{const b=new Uint8Array(w*h);for(let y=0;y<h;y++)for(let x=0;x<w;x++){if(!a[y*w+x])continue;
+    for(let t=-R;t<=R;t++){const xx=x+t*dx,yy=y+t*dy;if(xx>=0&&yy>=0&&xx<w&&yy<h)b[yy*w+xx]=1}}return b};
+  hole=grow(grow(hole,1,0),0,1);
   // 밀고 당기기(push-pull): 빈 곳을 점점 작은 해상도의 평균으로 채움
   let lv=[{w,h,c:new Float32Array(w*h*3),a:new Float32Array(w*h)}];
-  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x,dv=d[Math.min(H-1,Math.floor(y/h*H))*W+Math.min(W-1,Math.floor(x/w*W))];
-    if(dv<m){lv[0].a[i]=1;for(let c=0;c<3;c++)lv[0].c[i*3+c]=q[i*4+c]}}
+  for(let i=0;i<w*h;i++)if(!hole[i]){lv[0].a[i]=1;for(let c=0;c<3;c++)lv[0].c[i*3+c]=q[i*4+c]}
   while(lv[lv.length-1].w>1||lv[lv.length-1].h>1){const a=lv[lv.length-1],nw=Math.max(1,a.w>>1),nh=Math.max(1,a.h>>1),b={w:nw,h:nh,c:new Float32Array(nw*nh*3),a:new Float32Array(nw*nh)};
     for(let y=0;y<a.h;y++)for(let x=0;x<a.w;x++){const i=y*a.w+x;if(!a.a[i])continue;const j=Math.min(nh-1,y>>1)*nw+Math.min(nw-1,x>>1);b.a[j]+=a.a[i];for(let c=0;c<3;c++)b.c[j*3+c]+=a.c[i*3+c]*a.a[i]}
     for(let j=0;j<nw*nh;j++)if(b.a[j]){for(let c=0;c<3;c++)b.c[j*3+c]/=b.a[j];b.a[j]=1}
     lv.push(b)}
   if(!lv[lv.length-1].a[0])return; // 배경이 하나도 없음
-  for(let k=lv.length-2;k>=0;k--){const a=lv[k],b=lv[k+1];for(let y=0;y<a.h;y++)for(let x=0;x<a.w;x++){const i=y*a.w+x;if(a.a[i])continue;
-    const j=Math.min(b.h-1,y>>1)*b.w+Math.min(b.w-1,x>>1);for(let c=0;c<3;c++)a.c[i*3+c]=b.c[j*3+c];a.a[i]=1}}
+  for(let k=lv.length-2;k>=0;k--){const a=lv[k],b=lv[k+1],sxk=b.w/a.w,syk=b.h/a.h; // 한 단계 거친 층에서 부드럽게(쌍선형) 가져와 계단 무늬 방지
+    for(let y=0;y<a.h;y++)for(let x=0;x<a.w;x++){const i=y*a.w+x;if(a.a[i])continue;
+      const fx=Math.min(b.w-1,Math.max(0,(x+.5)*sxk-.5)),fy=Math.min(b.h-1,Math.max(0,(y+.5)*syk-.5)),x0=Math.floor(fx),y0=Math.floor(fy),x1=Math.min(b.w-1,x0+1),y1=Math.min(b.h-1,y0+1),tx=fx-x0,ty=fy-y0;
+      for(let c=0;c<3;c++){const v=(p,q)=>b.c[(q*b.w+p)*3+c];a.c[i*3+c]=(v(x0,y0)*(1-tx)+v(x1,y0)*tx)*(1-ty)+(v(x0,y1)*(1-tx)+v(x1,y1)*tx)*ty}a.a[i]=1}}
   for(let i=0;i<w*h;i++)for(let c=0;c<3;c++)q[i*4+c]=lv[0].c[i*3+c];
   g.putImageData(P,0,0);const t=new THREE.CanvasTexture(cv);t.encoding=THREE.sRGBEncoding;phBgMat.map=phBgMat.emissiveMap=t;phBgMat.needsUpdate=true;
 }
@@ -571,13 +577,24 @@ function buildPhotoMesh(){
   if(!PH.img||!PH.depth)return;
   const {W,H,depth:d}=PH,asp=PH.img.width/PH.img.height,hM=st.ph.size,wM=hM*asp;
   const sx=Math.min(W-1,320),sy=Math.max(2,Math.round(sx/asp*(H/W)*asp)),g=new THREE.PlaneGeometry(wM,hM,sx,sy),pos=g.attributes.position;
-  const zk=(st.ph.relief/100)*hM*.7;
-  for(let iy=0;iy<=sy;iy++)for(let ix=0;ix<=sx;ix++){ // PlaneGeometry는 위쪽 줄부터
-    const u=ix/sx,v=iy/sy,dx=Math.min(W-1,Math.round(u*(W-1))),dy=Math.min(H-1,Math.round(v*(H-1)));pos.setZ(iy*(sx+1)+ix,(d[dy*W+dx]-1)*zk);
-  }
+  const zk=(st.ph.relief/100)*hM*.7,cut=st.ph.cut/100,gw=sx+1,gh=sy+1,N=gw*gh;
+  // 격자 깊이와 인물/배경 구분. PlaneGeometry는 위쪽 줄부터
+  const z=new Float32Array(N),fg=new Uint8Array(N);
+  for(let iy=0;iy<gh;iy++)for(let ix=0;ix<gw;ix++){const i=iy*gw+ix,dv=d[Math.min(H-1,Math.round(iy/sy*(H-1)))*W+Math.min(W-1,Math.round(ix/sx*(W-1)))];z[i]=dv;fg[i]=cut<=0||dv>=cut?1:0}
+  // 표면을 부드럽게: 머리카락·주름 같은 잔결이 울퉁불퉁한 면이 되어 빛이 얼룩지던 문제.
+  // 인물은 인물끼리, 배경은 배경끼리만 섞어서 윤곽은 유지
+  const r=Math.max(2,Math.round(sx/45)),tmp=new Float32Array(N);
+  const blur=(a,b,dx,dy)=>{for(let iy=0;iy<gh;iy++)for(let ix=0;ix<gw;ix++){const i=iy*gw+ix;let sum=0,n=0;
+    for(let t=-r;t<=r;t++){const x=ix+t*dx,y=iy+t*dy;if(x<0||y<0||x>=gw||y>=gh)continue;const j=y*gw+x;if(fg[j]!==fg[i])continue;sum+=a[j];n++}b[i]=sum/n}};
+  for(let k=0;k<2;k++){blur(z,tmp,1,0);blur(tmp,z,0,1)}
+  // 인물 바로 바깥 배경 점은 인물 깊이로 당겨서, 윤곽에 길게 늘어진 면이 생기지 않게 (투명 처리는 알파가 맡음)
+  if(cut>0){const z2=z.slice();for(let iy=0;iy<gh;iy++)for(let ix=0;ix<gw;ix++){const i=iy*gw+ix;if(fg[i])continue;let sum=0,n=0;
+    for(const[ox,oy]of[[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]]){const x=ix+ox,y=iy+oy;if(x<0||y<0||x>=gw||y>=gh)continue;const j=y*gw+x;if(fg[j]){sum+=z2[j];n++}}
+    if(n)z[i]=sum/n}}
+  for(let i=0;i<N;i++)pos.setZ(i,(z[i]-1)*zk);
   g.computeVertexNormals();
   // 배경 잘라내기: 깊이가 기준보다 먼 곳은 투명
-  const ac=document.createElement('canvas');ac.width=W;ac.height=H;const ag=ac.getContext('2d'),A=ag.createImageData(W,H),cut=st.ph.cut/100;
+  const ac=document.createElement('canvas');ac.width=W;ac.height=H;const ag=ac.getContext('2d'),A=ag.createImageData(W,H);
   for(let i=0;i<W*H;i++){const on=cut<=0||d[i]>=cut;A.data[i*4]=A.data[i*4+1]=A.data[i*4+2]=on?255:0;A.data[i*4+3]=255}
   ag.putImageData(A,0,0);if(photoMat.alphaMap)photoMat.alphaMap.dispose();photoMat.alphaMap=new THREE.CanvasTexture(ac);photoMat.needsUpdate=true;
   if(photoMesh){photoG.remove(photoMesh);photoMesh.geometry.dispose()}
