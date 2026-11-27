@@ -38,6 +38,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans
 .dlg-img{display:block;max-width:100%;max-height:60vh;margin:0 auto;border-radius:6px}
 .dlg-act{display:flex;justify-content:flex-end;margin-top:10px}.dlg-act button{border:0;background:#2457e6;color:#fff;border-radius:999px;min-height:40px;padding:0 16px}
 .dlg-act button[hidden]{display:none}
+.dlg-in[hidden],.dlg-img[hidden]{display:none}
+.dlg-act{gap:8px}.dlg-act .sec{background:rgba(255,255,255,.14)}
 .saves .empty{font-size:12px;color:#8d8d94}
 .view canvas{display:block;width:100%;height:100%;touch-action:none}
 .hud{position:absolute;left:12px;right:12px;top:12px;display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;pointer-events:none}
@@ -245,7 +247,7 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
   <p class="dlg-msg" id="dlgMsg"></p>
   <input class="dlg-in" id="dlgIn" readonly hidden>
   <img class="dlg-img" id="dlgImg" alt="저장할 사진" data-ta="alt" hidden>
-  <div class="dlg-act"><button id="dlgCopy" hidden data-t>다시 복사</button></div>
+  <div class="dlg-act"><button id="dlgCopy" hidden data-t>다시 복사</button><button class="sec" id="dlgNo" hidden data-t>그대로 두기</button><button id="dlgOk" hidden></button></div>
 </div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -314,7 +316,8 @@ en:{
 '키:필 —':'Key:Fill —','키:필 — (둘 다 켜야 계산)':'Key:Fill — (turn both on)','키:필 {0}:1 · {1}스톱':'Key:Fill {0}:1 · {1} stops',
 '＋ 현재 카메라 저장':'＋ Save camera','초기 위치':'Home','링크 공유':'Share link','사진 저장':'Save photo','사진':'Photo','저장할 사진':'Photo to save',
 '위치 {0}':'Spot {0}','위치 {0} 삭제':'Delete spot {0}','저장된 위치가 없어요':'No saved positions',
-'다시 복사':'Copy again','복사했어요.':'Copied.','링크를 복사했어요.':'Link copied.',
+'다시 복사':'Copy again','그대로 두기':'Keep as is','초기 위치로 되돌릴까요?':'Return to the home position?','카메라 위치·방향·렌즈·초점이 처음 상태로 돌아가요. 저장해 둔 위치는 그대로예요.':'Camera position, direction, lens and focus go back to the start. Saved positions stay.','모든 설정을 기본값으로 되돌릴까요?':'Reset all settings to defaults?','조명·마네킹·벽·카메라 설정이 모두 처음 상태로 돌아가요. 저장해 둔 카메라 위치는 그대로예요.':'Lights, mannequin, wall and camera settings all go back to the start. Saved camera positions stay.',
+'복사했어요.':'Copied.','링크를 복사했어요.':'Link copied.',
 '복사가 막혔어요. 위 칸을 길게 눌러(또는 Ctrl+C) 직접 복사해 주세요.':'Copying was blocked. Long-press the box above (or press Ctrl+C) to copy it yourself.',
 '조명·카메라·벽·마네킹 설정이 모두 담겨 있어요.':'It contains all light, camera, backdrop and mannequin settings.',
 '조명·카메라·벽·마네킹 설정이 모두 담겨 있어요. 받는 사람도 이 페이지를 볼 수 있어야 열려요(공유 설정 필요).':'It contains all light, camera, backdrop and mannequin settings. The recipient needs access to this page to open it (check sharing settings).',
@@ -377,7 +380,8 @@ ja:{
 '키:필 —':'キー:フィル —','키:필 — (둘 다 켜야 계산)':'キー:フィル —（両方オンで計算）','키:필 {0}:1 · {1}스톱':'キー:フィル {0}:1 · {1}段',
 '＋ 현재 카메라 저장':'＋ カメラを保存','초기 위치':'初期位置','링크 공유':'リンク共有','사진 저장':'写真を保存','사진':'写真','저장할 사진':'保存する写真',
 '위치 {0}':'位置 {0}','위치 {0} 삭제':'位置 {0} を削除','저장된 위치가 없어요':'保存した位置はありません',
-'다시 복사':'もう一度コピー','복사했어요.':'コピーしました。','링크를 복사했어요.':'リンクをコピーしました。',
+'다시 복사':'もう一度コピー','그대로 두기':'そのままにする','초기 위치로 되돌릴까요?':'初期位置に戻しますか？','카메라 위치·방향·렌즈·초점이 처음 상태로 돌아가요. 저장해 둔 위치는 그대로예요.':'カメラの位置・向き・レンズ・ピントが最初の状態に戻ります。保存した位置はそのままです。','모든 설정을 기본값으로 되돌릴까요?':'すべての設定を初期設定に戻しますか？','조명·마네킹·벽·카메라 설정이 모두 처음 상태로 돌아가요. 저장해 둔 카메라 위치는 그대로예요.':'照明・マネキン・壁・カメラの設定がすべて最初の状態に戻ります。保存したカメラ位置はそのままです。',
+'복사했어요.':'コピーしました。','링크를 복사했어요.':'リンクをコピーしました。',
 '복사가 막혔어요. 위 칸을 길게 눌러(또는 Ctrl+C) 직접 복사해 주세요.':'コピーがブロックされました。上の欄を長押し（または Ctrl+C）して直接コピーしてください。',
 '조명·카메라·벽·마네킹 설정이 모두 담겨 있어요.':'ライト・カメラ・背景紙・マネキンの設定がすべて入っています。',
 '조명·카메라·벽·마네킹 설정이 모두 담겨 있어요. 받는 사람도 이 페이지를 볼 수 있어야 열려요(공유 설정 필요).':'ライト・カメラ・背景紙・マネキンの設定がすべて入っています。受け取る人がこのページを見られる必要があります（共有設定が必要）。',
@@ -510,6 +514,13 @@ const GCTRL=[
   ['wallD','배경지 거리',.4,4,.05,v=>`${(+v).toFixed(2)} m`],
   ['wallA','배경지 각도',-60,60,1,v=>`${v}°`]
 ];
+// 저장값·공유 링크의 숫자를 슬라이더 범위 안으로 (예전 버그 값이 남아 있어도 안전하게)
+function sanitize(o){
+  const b=fresh(),cl=(obj,def,rows)=>{if(!obj||!def)return;for(const[k,,mn,mx]of rows){if(!(k in def))continue;const v=obj[k];
+    obj[k]=typeof v!=='number'||isNaN(v)?def[k]:Math.min(mx,Math.max(mn,v))}};
+  for(const k of LIGHTS)cl(o[k],b[k],CTRL);cl(o,b,GCTRL);cl(o.cm,b.cm,CAMCTRL);cl(o.ph,b.ph,PHCTRL);return o;
+}
+sanitize(st);
 const rowHTML=(p,[k,t,mn,mx,stp])=>`<label class="row"><span>${tr(t)}</span><output id="o${p}${k}"></output><input type="range" id="${p}${k}" min="${mn}" max="${mx}" step="${stp}"></label>`;
 function buildRows(){
 $('#presets').innerHTML=PRESETS.map((p,i)=>`<button data-p="${i}">${tr(p.n)}</button>`).join('');
@@ -702,7 +713,7 @@ async function loadPhoto(f){
 function fitPhotoCam(){ // 사진이 프레임을 채우도록 카메라를 정면에
   const hM=st.ph.size,asp=PH.img?PH.img.width/PH.img.height:.8,fr=frameRect(),ty=frameHalfTan(),tx=ty*fr.aw/fr.ah;
   const dist=Math.max(hM/2/ty,hM*asp/2/tx)*1.04;
-  Object.assign(st.cm,{az:0,dist:Math.round(clamp(dist,.5,4.5)*100)/100,h:Math.round(phCenterY()*100)/100,pan:0,tilt:0,af:true});
+  Object.assign(st.cm,{az:0,dist:Math.round(clamp(dist,.5,4.5)*100)/100,h:Math.round(clamp(phCenterY(),.3,2.4)*100)/100,pan:0,tilt:0,af:true});
   st.bodyTurn=0;if(!camOn())setCamMode(true);else update();
 }
 function applyMq(){
@@ -1064,7 +1075,7 @@ $('#mqType').addEventListener('click',e=>{const b=e.target.closest('[data-mqt]')
 $('#poseSeg').addEventListener('click',e=>{const b=e.target.closest('[data-pose]');if(b){st.pose=clone(POSES[+b.dataset.pose].p);update()}});
 $('#arSeg').addEventListener('click',e=>{const b=e.target.closest('[data-ar]');if(b){st.cm.ar=b.dataset.ar;update()}});
 $('#gridSeg').addEventListener('click',e=>{const b=e.target.closest('[data-grid]');if(b){st.cm.grid=b.dataset.grid;update()}});
-$('#reset').onclick=()=>{st=fresh();sel='key';syncUI();update()};
+$('#reset').onclick=async()=>{if(!await ask('모든 설정을 기본값으로 되돌릴까요?','조명·마네킹·벽·카메라 설정이 모두 처음 상태로 돌아가요. 저장해 둔 카메라 위치는 그대로예요.','기본값으로'))return;st=fresh();sel='key';syncUI();update()};
 
 /* ---------- 3D 화면: 조명 탭 → 메뉴(이동/회전/조절) ---------- */
 const MODE={
@@ -1301,7 +1312,7 @@ $('#saves').addEventListener('click',e=>{
   const d=e.target.closest('[data-del]');if(d){saves.splice(+d.dataset.del,1);storeSaves();drawSaves();return}
   const l=e.target.closest('[data-i]');if(l)loadCam(saves[+l.dataset.i].cm);
 });
-$('#homeCam').onclick=()=>loadCam(pickCam(GBASE.cm));
+$('#homeCam').onclick=async()=>{if(await ask('초기 위치로 되돌릴까요?','카메라 위치·방향·렌즈·초점이 처음 상태로 돌아가요. 저장해 둔 위치는 그대로예요.','초기 위치'))loadCam(pickCam(GBASE.cm))};
 drawSaves();
 
 /* ---------- 링크 공유: 조절 가능한 상태 전체(st)를 압축해 주소 #뒤에 ----------
@@ -1327,9 +1338,15 @@ let shareCode='';const refreshShare=()=>encodeState().then(c=>shareCode=c).catch
 function dlg(title,msg,opt={}){
   $('#dlgT').textContent=title;$('#dlgMsg').textContent=msg;
   const i=$('#dlgIn'),im=$('#dlgImg');i.hidden=!opt.text;i.value=opt.text||'';im.hidden=!opt.img;if(opt.img)im.src=opt.img;
-  $('#dlgCopy').hidden=!opt.text;$('#dlg').hidden=false;if(opt.text){i.focus();i.select()}
+  $('#dlgCopy').hidden=!opt.text;$('#dlgOk').hidden=$('#dlgNo').hidden=!opt.ok;if(opt.ok)$('#dlgOk').textContent=opt.ok;
+  $('#dlg').hidden=false;if(opt.text){i.focus();i.select()}else if(opt.ok)$('#dlgNo').focus();
 }
-$('#dlgClose').onclick=()=>{$('#dlg').hidden=true;const im=$('#dlgImg');if(im.src.startsWith('blob:'))URL.revokeObjectURL(im.src);im.removeAttribute('src')};
+// 확인창: 확인이면 true. 닫기·바깥 탭·그대로 두기는 false
+let askDone=null;
+function ask(title,msg,ok){return new Promise(r=>{askDone=r;dlg(tr(title),tr(msg),{ok:tr(ok)})})}
+function endAsk(v){const r=askDone;askDone=null;$('#dlg').hidden=true;$('#dlgOk').hidden=$('#dlgNo').hidden=true;if(r)r(v)}
+$('#dlgOk').onclick=()=>endAsk(true);$('#dlgNo').onclick=()=>endAsk(false);
+$('#dlgClose').onclick=()=>{if(askDone)return endAsk(false);$('#dlg').hidden=true;const im=$('#dlgImg');if(im.src.startsWith('blob:'))URL.revokeObjectURL(im.src);im.removeAttribute('src')};
 $('#dlg').addEventListener('click',e=>{if(e.target.id==='dlg')$('#dlgClose').click()});
 async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch(e){return false}}
 $('#dlgCopy').onclick=async()=>{const ok=await copyText($('#dlgIn').value);$('#dlgMsg').textContent=tr(ok?'복사했어요.':'복사가 막혔어요. 위 칸을 길게 눌러(또는 Ctrl+C) 직접 복사해 주세요.')};
@@ -1342,7 +1359,7 @@ $('#shareBtn').onclick=async()=>{
 };
 async function applyHash(){
   const code=location.hash.slice(1);if(!/^v[01]-/.test(code))return;
-  try{const sv=await decodeState(code);if(!sv)return;st=mergeState(sv);if(pick3)closeCtx();openQ(false);setCamMode(st.cm.on);syncUI();update()}
+  try{const sv=await decodeState(code);if(!sv)return;st=sanitize(mergeState(sv));if(pick3)closeCtx();openQ(false);setCamMode(st.cm.on);syncUI();update()}
   catch(e){dlg(tr('링크를 열지 못했어요'),tr('링크가 잘렸거나 이 브라우저가 압축 해제를 지원하지 않아요.'))}
 }
 window.addEventListener('hashchange',applyHash);
