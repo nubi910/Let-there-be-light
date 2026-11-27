@@ -43,11 +43,12 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans
 .hud{position:absolute;left:12px;right:12px;top:12px;display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;pointer-events:none}
 .hud>*{pointer-events:auto}
 .pill{background:rgba(20,20,22,.72);color:#f2f2f2;border-radius:999px;padding:6px 12px;font-size:13px;white-space:nowrap;backdrop-filter:blur(6px)}
+.phload{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);white-space:nowrap;padding:10px 16px}.phload[hidden]{display:none}
 .phprompt{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);white-space:normal;text-align:center;max-width:86%;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;padding:10px 14px}.phprompt[hidden]{display:none}
 .refine{position:absolute;right:12px;bottom:10px;font-size:12px;color:rgba(255,255,255,.75);pointer-events:none}
 .refine[hidden]{display:none}
 .hint{right:110px;position:absolute;left:12px;bottom:10px;font-size:12px;color:rgba(255,255,255,.6);pointer-events:none}
-button{font:inherit;color:inherit;cursor:pointer}
+button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pill-btn{border:0;min-height:36px}
 .pill-btn[aria-pressed=true]{background:rgba(36,87,230,.92)}
 .ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
@@ -55,6 +56,8 @@ button{font:inherit;color:inherit;cursor:pointer}
 .caminfo{position:absolute;transform:translate(-50%,-100%);font-size:12px;padding:4px 10px;pointer-events:none}
 .caminfo[hidden],.focusbox[hidden]{display:none}
 .focusbox{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border:2px solid #ffd21f;border-radius:4px;pointer-events:none}
+.chipbtn{display:inline-flex;align-items:center;border:1px solid rgba(255,255,255,.22);border-radius:999px;min-height:34px;padding:0 10px;font-size:12px;cursor:pointer}
+#ctxPhRows{margin-top:6px}#ctxPhRows .row output{color:#c9c9cf}#ctxPhRows input[type=range]{accent-color:#8aabff}
 .fold summary{cursor:pointer;font-size:13px;color:#e6e6ea;min-height:32px;display:flex;align-items:center}
 .qcam{width:272px;max-height:calc(100% - 70px);overflow:auto}
 .q-l{display:flex;justify-content:space-between;font-size:13px;margin:10px 0 4px;color:#e6e6ea}.q-l output{color:#c9c9cf;font-variant-numeric:tabular-nums}
@@ -106,7 +109,7 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
 .note{font-size:13px;color:var(--mute);margin:2px 0 0}
 .foot{display:flex;gap:8px;margin-top:18px}
 .foot button{border:1px solid var(--line);background:transparent;border-radius:10px;min-height:40px;padding:0 14px}
-.ctx{position:absolute;z-index:3;width:236px;background:rgba(22,22,24,.92);color:#f2f2f2;border-radius:14px;padding:10px;backdrop-filter:blur(8px);box-shadow:0 8px 28px rgba(0,0,0,.4);font-size:14px}
+.ctx{position:absolute;z-index:3;width:236px;max-height:calc(100% - 110px);overflow:auto;background:rgba(22,22,24,.92);color:#f2f2f2;border-radius:14px;padding:10px;backdrop-filter:blur(8px);box-shadow:0 8px 28px rgba(0,0,0,.4);font-size:14px}
 .ctx[hidden],.ctx [hidden]{display:none}
 .ctx-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .ctx-h button{border:0;background:rgba(255,255,255,.12);border-radius:8px;width:36px;height:36px}
@@ -136,11 +139,12 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
     <div class="focusbox" id="focusBox" hidden></div>
     <div class="hud">
       <span class="pill" id="ratio" data-t>키:필 —</span>
-      <span style="display:flex;gap:6px"><button class="pill pill-btn" id="mqBtn" data-t>마네킹</button><button class="pill pill-btn" id="wallBtn" data-t>벽 조절</button><button class="pill pill-btn" id="camWide" aria-pressed="false" data-t>전체 보기</button><button class="pill pill-btn" id="camReset" aria-pressed="true" data-t>카메라</button></span>
+      <span style="display:flex;gap:6px"><button class="pill pill-btn" id="phBtn" data-t>사진</button><button class="pill pill-btn" id="mqBtn" data-t>마네킹</button><button class="pill pill-btn" id="wallBtn" data-t>벽 조절</button><button class="pill pill-btn" id="camWide" aria-pressed="false" data-t>전체 보기</button><button class="pill pill-btn" id="camReset" aria-pressed="true" data-t>카메라</button></span>
     </div>
     <div class="pill" id="loading" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)" data-t>얼굴 모델 불러오는 중…</div>
     <div class="hint" id="hint"></div>
     <div class="refine" id="refine" hidden></div>
+    <div class="pill phload" id="phLoad" hidden></div>
     <div class="pill phprompt" id="phPrompt" hidden><span data-t>사진을 끌어다 놓거나 골라 주세요. 사진은 이 기기 밖으로 나가지 않아요.</span> <label class="filebtn" for="phFile" style="margin-left:6px;min-height:34px"><span data-t>사진 고르기</span></label></div>
     <div class="ctx qcam" id="qcam" hidden>
       <div class="ctx-h"><b data-t>카메라 설정</b><button id="qClose" aria-label="닫기" data-ta="aria-label">✕</button></div>
@@ -163,6 +167,10 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
       </div>
       <p class="ctx-tip" id="ctxTip"></p>
       <button class="ctx-sub" id="aimReset" hidden data-t>피사체 쪽으로 다시 겨누기</button>
+      <div id="ctxPhoto" hidden>
+        <div class="chips"><label class="chipbtn" for="phFile"><span data-t>사진 바꾸기</span></label><button id="phClear" data-t>사진 지우기</button><button id="phFit2" data-t>사진에 카메라 맞추기</button></div>
+        <div id="ctxPhRows"></div>
+      </div>
       <div id="ctxPose" hidden><details class="fold"><summary data-t>종류 · 자세 프리셋</summary><div class="q-l"><span data-t>종류</span></div><div class="chips" id="cMqType"></div><div class="q-l"><span data-t>자세</span></div><div class="chips" id="cPose"></div></details>
         <div id="jEdit"><div class="q-l"><span data-t>관절</span><output id="selJn" data-t>팔다리를 탭하세요</output></div>
         <div class="chips"><button id="twistBtn" aria-pressed="false" data-t>비틀기</button><button id="jReset" data-t>이 관절 초기화</button></div>
@@ -320,7 +328,7 @@ const POSES=[
 ];
 const MQTYPES={bust:'흉상',torso:'토르소',upper:'상반신 전체',thigh:'허벅지까지',knee:'무릎 아래까지',full:'전신',photo:'사진'};
 const JOINTS=[['pelvis','골반'],['spine','허리'],['chest','가슴'],['neck','목'],['shoulderL','왼쪽 어깨'],['elbowL','왼쪽 팔꿈치'],['wristL','왼쪽 손목'],['shoulderR','오른쪽 어깨'],['elbowR','오른쪽 팔꿈치'],['wristR','오른쪽 손목'],['hipL','왼쪽 고관절'],['kneeL','왼쪽 무릎'],['ankleL','왼쪽 발목'],['hipR','오른쪽 고관절'],['kneeR','오른쪽 무릎'],['ankleR','오른쪽 발목']];
-const GBASE={ph:{keep:70,flat:30,relief:35,size:.7,cut:0},mq:'bust',bodyTurn:0,pose:JSON.parse(JSON.stringify(POSES[0].p)),amb:12,exp:0,turn:0,tilt:0,bg:'#8c8a86',wallD:1.4,wallA:0,
+const GBASE={ph:{keep:70,flat:30,relief:35,size:1,cut:0},mq:'bust',bodyTurn:0,pose:JSON.parse(JSON.stringify(POSES[0].p)),amb:12,exp:0,turn:0,tilt:0,bg:'#8c8a86',wallD:1.4,wallA:0,
   cm:{on:true,az:0,dist:1.7,h:1.56,pan:0,tilt:0,f:85,Ni:4,fd:1.6,af:true,ar:'2:3',grid:'thirds',dc:false}};
 const STOPS=[1.2,1.4,1.8,2,2.8,4,5.6,8,11,16];
 const AR={'2:3':[2,3],'3:2':[3,2],'4:5':[4,5],'1:1':[1,1],'16:9':[16,9]};
@@ -376,6 +384,7 @@ $('#lightCtrls').innerHTML=CTRL.map(c=>rowHTML('c-',c)).join('');
 $('#globalCtrls').innerHTML=GCTRL.map(c=>rowHTML('g-',c)).join('');
 $('#camCtrls').innerHTML=CAMCTRL.map(c=>rowHTML('k-',c)).join('');
 $('#phCtrls').innerHTML=PHCTRL.map(c=>rowHTML('h-',c)).join('');
+$('#ctxPhRows').innerHTML=PHCTRL.map(c=>rowHTML('x-',c)).join('');
 $('#jointCtrls').innerHTML=JCTRL.map(([k,t])=>rowHTML('p-',[k,t,-180,180,1])).join('');
 {const v=$('#jointSel').value;$('#jointSel').innerHTML=JOINTS.map(([k,n])=>`<option value="${k}">${tr(n)}</option>`).join('');if(v)$('#jointSel').value=v}
 }
@@ -471,8 +480,30 @@ const rigStand=new THREE.Group();scene.add(rigStand);
    원래 사진의 빛은 발광(emissive)으로 '원래 빛'만큼 남기고, 3D 조명은 그 위에 더해짐 */
 const photoG=new THREE.Group();photoG.visible=false;scene.add(photoG);
 const photoMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.85,emissive:0xffffff,side:THREE.DoubleSide,alphaTest:.5,toneMapped:false});
-let photoMesh=null;const PH={img:null,depth:null,W:0,H:0,est:null,busy:false};
-function phStatus(t){$('#phStatus').textContent=t||'';$('#phStatus').hidden=!t}
+let photoMesh=null;
+const phPole=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,1,12),new THREE.MeshStandardMaterial({color:0x2a2a2c,roughness:.8}));phPole.castShadow=true;photoG.add(phPole);
+{const f=new THREE.Mesh(new THREE.CylinderGeometry(.18,.2,.03,32),phPole.material);f.position.y=.015;f.receiveShadow=true;photoG.add(f)}const PH={img:null,depth:null,W:0,H:0,est:null,busy:false};
+function phStatus(t){$('#phStatus').textContent=t||'';$('#phStatus').hidden=!t;$('#phLoad').textContent=t||'';$('#phLoad').hidden=!t}
+function setPh(k,v){ // 사진 설정 바꾸기 (패널·메뉴 공통)
+  st.ph[k]=v;
+  if(k==='flat'){clearTimeout(buildAlbedo.t);buildAlbedo.t=setTimeout(()=>PH.img&&buildAlbedo(),150)}
+  else if(k!=='keep'){clearTimeout(buildPhotoMesh.t);buildPhotoMesh.t=setTimeout(buildPhotoMesh,120)}
+  update(false);
+}
+const PH_TOP=1.78; // 사진 윗변 높이 (인물 사진은 보통 머리가 위쪽)
+const phCenterY=()=>PH_TOP-st.ph.size/2;
+let prevMq='bust';
+function clearPhoto(){ // 사진 지우고 이전 마네킹으로
+  PH.img=null;PH.depth=null;if(photoMesh){photoG.remove(photoMesh);photoMesh.geometry.dispose();photoMesh=null}
+  for(const k of['map','emissiveMap','alphaMap'])if(photoMat[k]){photoMat[k].dispose();photoMat[k]=null}
+  phStatus('');if(pick3)closeCtx();st.mq=prevMq&&prevMq!=='photo'?prevMq:'bust';update();
+}
+function otsu(d){ // 깊이 분포를 둘로 가르는 기준값 (인물 / 배경)
+  const N=64,h=new Array(N).fill(0);for(const v of d)h[Math.min(N-1,Math.floor(v*N))]++;
+  let tot=d.length,sum=0;for(let i=0;i<N;i++)sum+=i*h[i];let sB=0,wB=0,best=0,th=0;
+  for(let i=0;i<N;i++){wB+=h[i];if(!wB)continue;const wF=tot-wB;if(!wF)break;sB+=i*h[i];const mB=sB/wB,mF=(sum-sB)/wF,b=wB*wF*(mB-mF)**2;if(b>best){best=b;th=i}}
+  return (th+1)/N;
+}
 function smoothDepth(src,W,H){ // 0..1로 맞추고, 윤곽은 살리며 잡음 줄이기
   let mn=Infinity,mx=-Infinity;for(const v of src){if(v<mn)mn=v;if(v>mx)mx=v}
   const d=new Float32Array(W*H),tmp=new Float32Array(W*H),R=3,edge=.04;for(let i=0;i<d.length;i++)d[i]=(src[i]-mn)/(mx-mn||1);
@@ -506,7 +537,8 @@ function buildPhotoMesh(){
   for(let i=0;i<W*H;i++){const on=cut<=0||d[i]>=cut;A.data[i*4]=A.data[i*4+1]=A.data[i*4+2]=on?255:0;A.data[i*4+3]=255}
   ag.putImageData(A,0,0);if(photoMat.alphaMap)photoMat.alphaMap.dispose();photoMat.alphaMap=new THREE.CanvasTexture(ac);photoMat.needsUpdate=true;
   if(photoMesh){photoG.remove(photoMesh);photoMesh.geometry.dispose()}
-  photoMesh=new THREE.Mesh(g,photoMat);photoMesh.castShadow=photoMesh.receiveShadow=true;photoMesh.position.y=HEAD_Y-.06;photoG.add(photoMesh);req();
+  photoMesh=new THREE.Mesh(g,photoMat);photoMesh.castShadow=photoMesh.receiveShadow=true;photoMesh.position.y=phCenterY();photoG.add(photoMesh);
+  phPole.scale.y=Math.max(.01,phCenterY()-hM/2);phPole.position.set(0,phPole.scale.y/2,-.04);req();
 }
 async function getEstimator(){
   if(PH.est)return PH.est;
@@ -519,7 +551,8 @@ async function getEstimator(){
 }
 async function loadPhoto(f){
   if(!f||!f.type||!f.type.startsWith('image/')||PH.busy)return;PH.busy=true;
-  if(st.mq!=='photo'){st.mq='photo';update()}
+  if(st.mq!=='photo'){prevMq=st.mq;st.mq='photo';update()}
+  phStatus(tr('사진 여는 중…'));$('#phPrompt').hidden=true;
   try{
     const url=URL.createObjectURL(f),im=new Image();im.src=url;await im.decode();
     const sc=Math.min(1,2048/Math.max(im.width,im.height)),cv=document.createElement('canvas');cv.width=Math.round(im.width*sc);cv.height=Math.round(im.height*sc);
@@ -528,6 +561,7 @@ async function loadPhoto(f){
     phStatus(tr('모델 준비 중…'));const est=await getEstimator();
     phStatus(tr('입체 추정 중…'));const out=await est(cv.toDataURL('image/jpeg',.92)),pd=out.predicted_depth;
     PH.H=pd.dims[pd.dims.length-2];PH.W=pd.dims[pd.dims.length-1];PH.depth=smoothDepth(pd.data,PH.W,PH.H);
+    st.ph.cut=Math.round(otsu(PH.depth)*100); // 인물과 배경을 자동으로 나눠 배경 잘라내기
     buildPhotoMesh();phStatus('');fitPhotoCam();
   }catch(e){console.error(e);phStatus(tr('입체를 추정하지 못했어요')+': '+String(e&&e.message||e).slice(0,80))}
   PH.busy=false;update();
@@ -535,14 +569,14 @@ async function loadPhoto(f){
 function fitPhotoCam(){ // 사진이 프레임을 채우도록 카메라를 정면에
   const hM=st.ph.size,asp=PH.img?PH.img.width/PH.img.height:.8,fr=frameRect(),ty=frameHalfTan(),tx=ty*fr.aw/fr.ah;
   const dist=Math.max(hM/2/ty,hM*asp/2/tx)*1.04;
-  Object.assign(st.cm,{az:0,dist:Math.round(clamp(dist,.5,4.5)*100)/100,h:Math.round((HEAD_Y-.06)*100)/100,pan:0,tilt:0,af:true});
+  Object.assign(st.cm,{az:0,dist:Math.round(clamp(dist,.5,4.5)*100)/100,h:Math.round(phCenterY()*100)/100,pan:0,tilt:0,af:true});
   st.bodyTurn=0;if(!camOn())setCamMode(true);else update();
 }
 function applyMq(){
   const t=st.mq in MQTYPES?st.mq:'bust',bust=t==='bust',ph=t==='photo';
   head.visible=body.visible=bust;rig.visible=!bust&&!ph;rigStand.visible=!bust&&!ph&&t!=='full';
-  photoG.visible=ph;photoG.rotation.y=(st.bodyTurn||0)*D2R;photoMat.emissiveIntensity=st.ph.keep/100;
-  $('#phBox').hidden=!ph;$('#phPrompt').hidden=!(ph&&!PH.img);
+  photoG.visible=ph;for(const o of photoG.children)if(o!==photoMesh)o.visible=!!photoMesh;photoG.rotation.y=(st.bodyTurn||0)*D2R;photoMat.emissiveIntensity=st.ph.keep/100;
+  $('#phBox').hidden=!ph;$('#phPrompt').hidden=!(ph&&!PH.img&&!PH.busy);$('#phBtn').setAttribute('aria-pressed',ph);
   J.shoulderL.visible=J.shoulderR.visible=t!=='torso';
   J.hipL.visible=J.hipR.visible=['thigh','knee','full'].includes(t);
   J.kneeL.visible=J.kneeR.visible=['knee','full'].includes(t);
@@ -633,7 +667,7 @@ function applyCam(){
   cam.position.copy(p);cam.up.set(0,1,0);
   cam.lookAt(p.clone().add(new THREE.Vector3(Math.sin(yw)*Math.cos(pt),Math.sin(pt),Math.cos(yw)*Math.cos(pt))));cam.updateMatrixWorld();
   if(c.af){ // 얼굴(눈 근처)까지의 거리에 초점
-    const hj=st.mq==='bust'||!(st.mq in MQTYPES)?head:J.head;hj.updateMatrixWorld(true);const eye=st.mq==='photo'?new THREE.Vector3(0,HEAD_Y-.06,0):hj.localToWorld(new THREE.Vector3(0,HEAD_Y+.03-(hj===head?PIV:HJ_Y),.095)),fwd=new THREE.Vector3();
+    const hj=st.mq==='bust'||!(st.mq in MQTYPES)?head:J.head;hj.updateMatrixWorld(true);const eye=st.mq==='photo'?new THREE.Vector3(0,phCenterY(),0):hj.localToWorld(new THREE.Vector3(0,HEAD_Y+.03-(hj===head?PIV:HJ_Y),.095)),fwd=new THREE.Vector3();
     cam.getWorldDirection(fwd);c.fd=Math.round(clamp(eye.sub(p).dot(fwd),.3,6)*100)/100;
   }
 }
@@ -830,13 +864,13 @@ function syncOutputs(){
   for(const [k,,,,,f] of CTRL){$('#c-'+k).value=st[sel][k];$('#oc-'+k).textContent=f(st[sel][k])}
   for(const [k,,,,,f] of GCTRL){$('#g-'+k).value=st[k];$('#og-'+k).textContent=f(st[k])}
   for(const [k,,,,,f] of CAMCTRL){$('#k-'+k).value=st.cm[k];$('#ok-'+k).textContent=f(st.cm[k])}
-  {const pr=on=>`aria-pressed="${on}"`,tp=Object.entries(MQTYPES).map(([k,n])=>`<button data-mqt="${k}" ${pr(st.mq===k)}>${tr(n)}</button>`).join(''),
+  {const pr=on=>`aria-pressed="${on}"`,tp=Object.entries(MQTYPES).filter(([k])=>k!=='photo').map(([k,n])=>`<button data-mqt="${k}" ${pr(st.mq===k)}>${tr(n)}</button>`).join(''),
      ps=POSES.map((q,i)=>`<button data-pose="${i}" ${pr(JSON.stringify(q.p)===JSON.stringify(st.pose))}>${tr(q.n)}</button>`).join('');
    $('#mqType').innerHTML=tp;$('#cMqType').innerHTML=tp;$('#poseSeg').innerHTML=ps;$('#cPose').innerHTML=ps;
    const jn=$('#jointSel').value||'pelvis',r=(st.pose&&st.pose[jn])||[0,0,0];
    JCTRL.forEach(([k],i)=>{$('#p-'+k).value=r[i];$('#op-'+k).textContent=r[i]+'°'});
    const off=st.mq==='bust'||st.mq==='photo';for(const el of[$('#jointSel'),...document.querySelectorAll('#jointCtrls input,#poseSeg button')])el.disabled=off;}
-  for(const [k,,,,,f] of PHCTRL){$('#h-'+k).value=st.ph[k];$('#oh-'+k).textContent=f(st.ph[k])}
+  for(const [k,,,,,f] of PHCTRL)for(const pf of['h','x']){$(`#${pf}-`+k).value=st.ph[k];$(`#o${pf}-`+k).textContent=f(st.ph[k])}
   $('#af').checked=st.cm.af;$('#dc').checked=st.cm.dc;
   {const c=st.cm,pr=(on)=>`aria-pressed="${on}"`;
    $('#q-f').value=c.f;$('#oq-f').textContent=c.f+'mm';$('#q-fd').value=c.fd;$('#oq-fd').textContent=c.fd.toFixed(2)+' m'+(c.af?' · '+tr('얼굴 AF'):' · MF');
@@ -864,7 +898,11 @@ function ratio(){
 }
 function update(saveNow=true){apply();syncOutputs();drawMap();ratio();if(saveNow)save()}
 
-$('#mqBtn').onclick=()=>{if(pick3==='mq')closeCtx();else{mode='rot';openCtx('mq')}};
+$('#phBtn').onclick=()=>{
+  if(!PH.img){if(st.mq!=='photo'){prevMq=st.mq;st.mq='photo';update()}$('#phFile').click();return}
+  if(pick3==='photo')closeCtx();else{if(st.mq!=='photo'){prevMq=st.mq;st.mq='photo';update()}mode=null;openCtx('photo')}
+};
+$('#mqBtn').onclick=()=>{if(st.mq==='photo'){st.mq=prevMq&&prevMq!=='photo'?prevMq:'bust';update()}if(pick3==='mq')closeCtx();else{mode='rot';openCtx('mq')}};
 $('#wallBtn').onclick=()=>{if(isWall())closeCtx();else{mode=null;openCtx('wall')}};
 $('#tabs').addEventListener('click',e=>{const b=e.target.closest('[data-k]');if(b){sel=b.dataset.k;syncUI()}});
 document.querySelector('.panel').addEventListener('input',e=>{
@@ -873,9 +911,7 @@ document.querySelector('.panel').addEventListener('input',e=>{
   else if(id.startsWith('g-'))st[id.slice(2)]=+e.target.value;
   else if(id.startsWith('p-')){const jn=$('#jointSel').value,r=[...((st.pose&&st.pose[jn])||[0,0,0])];r['xyz'.indexOf(id[2])]=+e.target.value;st.pose={...st.pose,[jn]:r}}
   else if(id==='jointSel'){syncOutputs();return}
-  else if(id.startsWith('h-')){const k=id.slice(2);st.ph[k]=+e.target.value;
-    if(k==='flat'){clearTimeout(buildAlbedo.t);buildAlbedo.t=setTimeout(()=>PH.img&&buildAlbedo(),150)}
-    else if(k!=='keep'){clearTimeout(buildPhotoMesh.t);buildPhotoMesh.t=setTimeout(buildPhotoMesh,120)}}
+  else if(id.startsWith('h-')){setPh(id.slice(2),+e.target.value)}
   else if(id==='phFile')return;
   else if(id.startsWith('k-')){st.cm[id.slice(2)]=+e.target.value;if(id==='k-fd')st.cm.af=false}
   else if(id==='af')st.cm.af=e.target.checked;
@@ -920,7 +956,7 @@ function hitLight(e){ // 조명 > 마네킹/바닥 > 벽 순서로 맞은 대상
   setRay(e);const objs=[floor,head,body,rig,rigStand,photoG,wall];if(camObj.visible)objs.push(camModel);for(const k of LIGHTS)if(st[k].on)objs.push(L[k].pick,L[k].g);
   const h=ray.intersectObjects(objs,true).find(x=>shown(x.object));let o=h&&h.object;while(o&&!o.userData.k)o=o.parent;return o?o.userData.k:null;
 }
-const isCam3=()=>pick3==='cam3',isWall=()=>pick3==='wall',isMq=()=>pick3==='mq',isLight=()=>LIGHTS.includes(pick3);
+const isPh=()=>pick3==='photo',isCam3=()=>pick3==='cam3',isWall=()=>pick3==='wall',isMq=()=>pick3==='mq',isLight=()=>LIGHTS.includes(pick3);
 let selJ=null,twist=false;
 const poseEditOn=()=>isMq()&&mode==='adj'&&!['bust','photo'].includes(st.mq)&&st.mq in MQTYPES;
 const dragging=()=>pick3&&(mode==='move'||mode==='rot'||(poseEditOn()&&!!selJ));
@@ -966,15 +1002,15 @@ function glow(){
 function renderCtx(){
   const m=$('#ctx');m.hidden=!pick3;controls.enabled=!dragging()&&!camOn();
   if(!pick3){glow();return}
-  $('#ctxName').textContent=tr(isCam3()?'카메라':isWall()?'배경지':isMq()?'마네킹':NAME[pick3]+' 조명');
+  $('#ctxName').textContent=tr(isPh()?'사진':isCam3()?'카메라':isWall()?'배경지':isMq()?'마네킹':NAME[pick3]+' 조명');
   for(const b of m.querySelectorAll('[data-m]')){
-    b.hidden=isCam3()&&b.dataset.m==='adj';
+    b.hidden=(isCam3()&&b.dataset.m==='adj')||isPh();
     b.querySelector('.ml').textContent=tr(isMq()?{move:'몸 방향',rot:'고개',adj:'자세'}[b.dataset.m]:{move:'이동',rot:'회전',adj:'조절'}[b.dataset.m]);
   }
   for(const b of m.querySelectorAll('[data-m]'))b.setAttribute('aria-pressed',b.dataset.m===mode);
-  $('#ctxAdj').hidden=mode!=='adj'||!isLight();$('#ctxWall').hidden=mode!=='adj'||!isWall();$('#ctxPose').hidden=mode!=='adj'||!isMq();$('#aimReset').hidden=!(mode==='rot'||(isMq()&&mode==='move'));
+  $('#ctxAdj').hidden=mode!=='adj'||!isLight();$('#ctxWall').hidden=mode!=='adj'||!isWall();$('#ctxPose').hidden=mode!=='adj'||!isMq();$('#ctxPhoto').hidden=!isPh();$('#aimReset').hidden=!(mode==='rot'||(isMq()&&mode==='move'));
   $('#aimReset').textContent=tr(isLight()||isCam3()?'피사체 쪽으로 다시 겨누기':'정면으로 되돌리기');
-  $('#ctxTip').textContent=tr(!mode?'모드를 골라주세요':isCam3()?CAMTIP[mode]:isWall()?WALLTIP[mode]||'':isMq()?{move:'좌우로 끌면 몸 전체가 돌아가요',rot:'좌우로 끌면 얼굴이 돌아가고, 위아래로 끌면 고개를 숙이거나 들어요',adj:''}[mode]:MODE[mode].tip);$('#ctxTip').hidden=mode==='adj';
+  $('#ctxTip').hidden=isPh();if(!isPh())$('#ctxTip').textContent=tr(!mode?'모드를 골라주세요':isCam3()?CAMTIP[mode]:isWall()?WALLTIP[mode]||'':isMq()?{move:'좌우로 끌면 몸 전체가 돌아가요',rot:'좌우로 끌면 얼굴이 돌아가고, 위아래로 끌면 고개를 숙이거나 들어요',adj:''}[mode]:MODE[mode].tip);$('#ctxTip').hidden=mode==='adj'||isPh();
   {const pe=poseEditOn();$('#jEdit').hidden=!pe;
    $('#selJn').textContent=tr(selJ?(JOINTS.find(x=>x[0]===selJ)||[])[1]:'팔다리를 탭하세요');
    $('#twistBtn').setAttribute('aria-pressed',twist);$('#jReset').disabled=!selJ;
@@ -986,10 +1022,10 @@ function closeCtx(){pick3=null;mode=null;selJ=null;renderCtx()}
 function placeCtx(){
   const m=$('#ctx'),W=view.clientWidth,H=view.clientHeight,w=m.offsetWidth,h=m.offsetHeight;
   const v=isCam3()?camObj.position.clone().project(cam):!isLight()?new THREE.Vector3(9,9,9):L[pick3].g.position.clone().project(cam);let x,y;
-  if(isMq()||isWall()){x=8;y=document.querySelector('.hud').offsetHeight+18}  // 마네킹·벽: 왼쪽 위 고정
+  if(isMq()||isWall()||isPh()){x=8;y=document.querySelector('.hud').offsetHeight+18}  // 마네킹·벽: 왼쪽 위 고정
   else if(v.z>1||Math.abs(v.x)>1||Math.abs(v.y)>1){x=(W-w)/2;y=H-h-34}  // 조명이 화면 밖이면 아래쪽에 고정
   else{const px=(v.x+1)/2*W,py=(1-v.y)/2*H;x=px+44+w<W?px+44:px-44-w;y=py-h/2}
-  m.style.left=clamp(x,8,W-w-8)+'px';m.style.top=clamp(y,56,H-h-30)+'px';
+  const top=document.querySelector('.hud').offsetHeight+18;m.style.left=clamp(x,8,W-w-8)+'px';m.style.top=clamp(y,top,Math.max(top,H-h-30))+'px';
 }
 $('#ctx').addEventListener('click',e=>{
   const b=e.target.closest('[data-m]');
@@ -1002,6 +1038,7 @@ $('#ctx').addEventListener('click',e=>{
   if(e.target.closest('#aimReset')){if(isCam3()){st.cm.pan=0;st.cm.tilt=0}else if(isWall())st.wallA=0;else if(isMq()){if(mode==='move')st.bodyTurn=0;else{st.turn=0;st.tilt=0}}else{st[pick3].yaw=0;st[pick3].pitch=0}update()}
 });
 $('#ctx').addEventListener('input',e=>{
+  if(e.target.id.startsWith('x-')){setPh(e.target.id.slice(2),+e.target.value);return}
   if(e.target.id==='w-col'){st.bg=e.target.value;update();return}
   const p=st[pick3],id=e.target.id;if(!p)return;
   if(id==='a-pow')p.pow=+e.target.value;else if(id==='a-size')p.size=+e.target.value;
@@ -1209,6 +1246,8 @@ $('#lang').addEventListener('change',e=>{
 });
 $('#phFile').addEventListener('change',e=>{loadPhoto(e.target.files[0]);e.target.value=''});
 $('#phFit').onclick=()=>fitPhotoCam();
+$('#phFit2').onclick=()=>fitPhotoCam();
+$('#phClear').onclick=()=>clearPhoto();
 view.addEventListener('dragover',e=>{if([...e.dataTransfer.items].some(i=>i.kind==='file')){e.preventDefault()}});
 view.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/')){e.preventDefault();loadPhoto(f)}});
 setCamMode(st.cm.on);syncUI();update(false);ratio();refreshShare();applyHash();

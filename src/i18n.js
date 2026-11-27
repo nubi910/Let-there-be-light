@@ -3,6 +3,7 @@
 const LANGS={ko:'한국어',en:'English',ja:'日本語'};
 const I18N={
 en:{
+'사진 바꾸기':'Change photo','사진 지우기':'Remove photo','사진 여는 중…':'Opening photo…',
 '사진 크기':'Photo size','배경 잘라내기':'Cut background','사진에 카메라 맞추기':'Fit camera to photo',
 '사진의 입체는 AI가 한 장에서 추정한 값이라 실제와 다를 수 있어요. 이미 찍힌 강한 그림자는 완전히 지워지지 않아요. 사진은 이 기기 밖으로 나가지 않고, 공유 링크에도 들어가지 않아요.':'The 3D shape is estimated by AI from a single photo, so it may differ from reality. Strong shadows already in the photo can\'t be fully removed. Your photo never leaves this device and isn\'t included in share links.',
 '사진 리라이팅':'Photo relighting','사진 리라이팅 (베타)':'Photo relighting (beta)','사진 리라이팅 (베타) →':'Photo relighting (beta) →',
@@ -65,6 +66,7 @@ en:{
 '여기서는 바로 저장이 안 돼요. 사진을 길게 누르거나 오른쪽 클릭해서 저장해 주세요.':'Direct saving isn\'t available here. Long-press or right-click the photo to save it.'
 },
 ja:{
+'사진 바꾸기':'写真を変更','사진 지우기':'写真を削除','사진 여는 중…':'写真を開いています…',
 '사진 크기':'写真のサイズ','배경 잘라내기':'背景を切り抜く','사진에 카메라 맞추기':'カメラを写真に合わせる',
 '사진의 입체는 AI가 한 장에서 추정한 값이라 실제와 다를 수 있어요. 이미 찍힌 강한 그림자는 완전히 지워지지 않아요. 사진은 이 기기 밖으로 나가지 않고, 공유 링크에도 들어가지 않아요.':'写真の立体はAIが1枚から推定した値なので実際と違うことがあります。元の強い影は完全には消えません。写真はこの端末の外に送られず、共有リンクにも含まれません。',
 '사진 리라이팅':'写真リライティング','사진 리라이팅 (베타)':'写真リライティング（ベータ）','사진 리라이팅 (베타) →':'写真リライティング（ベータ）→',
