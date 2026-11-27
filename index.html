@@ -21,7 +21,15 @@
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans KR",system-ui,sans-serif;overflow-x:clip}
 .app{display:grid;grid-template-columns:minmax(0,1fr) 380px;height:100dvh}
-.view{position:relative;background:#2b2b2d;overflow:hidden}
+.left{display:flex;flex-direction:column;min-height:0;min-width:0}
+.view{position:relative;background:#2b2b2d;overflow:hidden;flex:1;min-height:0}
+.cambar{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#1d1d1f;color:#eee;border-top:1px solid #333}
+.cambar button{border:1px solid rgba(255,255,255,.22);background:transparent;border-radius:999px;min-height:40px;padding:0 12px;font-size:13px;white-space:nowrap;color:#eee}
+#saveCam{background:#2457e6;border-color:#2457e6;flex:none}#homeCam{flex:none}
+.saves{display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0}
+.save{display:flex;align-items:center;border:1px solid rgba(255,255,255,.22);border-radius:999px;flex:none}
+.cambar .save button{border:0;border-radius:999px}.save .load{padding:0 4px 0 12px}.save .load small{color:#a9a9b0;margin-left:4px}.save .del{padding:0 12px;color:#a9a9b0}
+.saves .empty{font-size:12px;color:#8d8d94}
 .view canvas{display:block;width:100%;height:100%;touch-action:none}
 .hud{position:absolute;left:12px;right:12px;top:12px;display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;pointer-events:none}
 .hud>*{pointer-events:auto}
@@ -97,7 +105,8 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
 #ctxAdj{margin-top:6px}#ctxAdj .row output{color:#c9c9cf}#ctxAdj input[type=range]{accent-color:#ffd21f}#ctxAdj .line{margin:6px 0 0}
 @media(max-width:899px){
   .app{grid-template-columns:minmax(0,1fr);height:auto}
-  .view{height:58vh;min-height:320px}
+  .view{height:58vh;min-height:320px;flex:none}
+  .cambar{flex-wrap:wrap}.saves{order:3;flex-basis:100%}
   .panel{border-left:0;border-top:1px solid var(--line)}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -105,6 +114,7 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
 </head>
 <body>
 <div class="app">
+  <div class="left">
   <div class="view" id="view">
     <svg class="ov" id="ov"></svg>
     <div class="pill caminfo" id="camInfo" hidden></div>
@@ -144,6 +154,12 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
         <div class="line"><label><input type="checkbox" id="a-on"> 켜기</label><label>색 <input type="color" id="a-col"></label></div>
       </div>
     </div>
+  </div>
+  <div class="cambar">
+    <button id="saveCam">＋ 현재 카메라 저장</button>
+    <div class="saves" id="saves"></div>
+    <button id="homeCam">초기 위치</button>
+  </div>
   </div>
   <aside class="panel">
     <h1>라이팅 시뮬레이터</h1>
@@ -337,6 +353,15 @@ new THREE.GLTFLoader().parse(glb,'',g=>{
 }catch(e){loadFail(e)}
 
 const darkMat=new THREE.MeshStandardMaterial({color:0x2a2a2c,roughness:.8});
+/* 카메라 오브젝트 (전체 보기에서 보이고, 카메라 모드에서는 이 시점으로 들어감). +z가 렌즈 방향 */
+const camObj=new THREE.Group(),camModel=new THREE.Group();camObj.userData.k='cam3';scene.add(camObj);camObj.add(camModel);
+{const m=new THREE.MeshStandardMaterial({color:0x1b1b1d,roughness:.45}),add=(g,x,y,z)=>{const o=new THREE.Mesh(g,m);o.position.set(x,y,z);camModel.add(o);return o};
+ add(new THREE.BoxGeometry(.14,.1,.08),0,0,-.02);add(new THREE.BoxGeometry(.05,.035,.05),0,.065,-.02);
+ add(new THREE.CylinderGeometry(.036,.036,.09,24),0,0,.065).rotation.x=Math.PI/2;}
+const camShell=new THREE.Mesh(new THREE.BoxGeometry(.19,.15,.24),new THREE.MeshBasicMaterial({side:THREE.BackSide,toneMapped:false}));camShell.position.z=.02;camShell.visible=false;camModel.add(camShell);
+const camPick=new THREE.Mesh(new THREE.SphereGeometry(.22,12,8),new THREE.MeshBasicMaterial({visible:false}));camModel.add(camPick);
+const camPole=new THREE.Mesh(new THREE.CylinderGeometry(.015,.015,1,8),darkMat);scene.add(camPole);
+const frus=new THREE.LineSegments(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:0x8aabff,toneMapped:false,transparent:true,opacity:.75}));camObj.add(frus);
 const L={};
 
 for(const k of LIGHTS){
@@ -385,7 +410,7 @@ function apply(){
   head.rotation.y=st.turn*D2R;head.rotation.x=st.tilt*D2R;
   floorMat.color.set(st.bg);wallMat.color.set(st.bg);
   const wa=st.wallA*D2R;wallG.position.set(-Math.sin(wa)*st.wallD,0,-Math.cos(wa)*st.wallD);wallG.rotation.y=wa;
-  applyCam();
+  applyCam();updateCamObj();
   req();
 }
 /* ---------- 카메라 모드 ---------- */
@@ -425,11 +450,22 @@ function drawOv(){
   info.style.left=(x+w/2)+'px';info.style.top=(y+h-8)+'px';
   info.textContent=`${c.f}mm · f/${STOPS[c.Ni]} · 초점 ${c.fd.toFixed(2)}m${c.af?' (얼굴 AF)':' (MF)'} · ${c.ar}`;
 }
+function updateCamObj(){
+  const on=!camOn();camObj.visible=camPole.visible=on;if(!on)return;
+  const p=camPos(),[yw,pt]=camYawPitch();camObj.position.copy(p);
+  camObj.lookAt(p.clone().add(new THREE.Vector3(Math.sin(yw)*Math.cos(pt),Math.sin(pt),Math.cos(yw)*Math.cos(pt))));
+  camPole.scale.y=Math.max(p.y-.05,.01);camPole.position.set(p.x,(p.y-.05)/2,p.z);
+  // 화각 범위: 카메라에서 초점면까지 네 모서리 선 + 초점면 사각형
+  const fr=frameRect(),ty=frameHalfTan(),tx=ty*fr.aw/fr.ah,f=st.cm.fd,c=[[1,1],[-1,1],[-1,-1],[1,-1]].map(([a,b])=>[a*tx*f,b*ty*f,f]),v=[];
+  for(const q of c)v.push(0,0,.11,...q);for(let i=0;i<4;i++)v.push(...c[i],...c[(i+1)%4]);
+  frus.geometry.setAttribute('position',new THREE.Float32BufferAttribute(v,3));frus.geometry.computeBoundingSphere();
+}
 function setCamMode(on){
+  if(on&&pick3==='cam3'){pick3=null;mode=null;$('#ctx').hidden=true;camShell.visible=false}
   st.cm.on=on;controls.enabled=!on;
   if(!on){cam.fov=32;cam.updateProjectionMatrix()}
   $('#camReset').setAttribute('aria-pressed',on);$('#camWide').setAttribute('aria-pressed',!on);
-  $('#hint').textContent=on?'끌기: 카메라 방향 · 핀치/휠: 줌 · 탭: 초점 맞추기 / 조명 메뉴':'조명 탭: 메뉴 · 빈 곳 드래그: 시점 회전';
+  $('#hint').textContent=on?'끌기: 카메라 방향 · 핀치/휠: 줌 · 탭: 초점 맞추기 / 조명 메뉴':'조명·카메라 탭: 메뉴 · 빈 곳 드래그: 시점 회전';
   update();
 }
 
@@ -653,6 +689,7 @@ const MODE={
   rot:{c:'#2f7bff',tip:'끌면 조명이 비추는 방향이 바뀌어요'},
   adj:{c:'#ffd21f',tip:''}
 };
+const CAMTIP={move:'좌우로 끌면 피사체 주위를 돌고, 위아래로 끌면 높이가 바뀌어요 · 핀치/휠: 거리',rot:'끌면 카메라가 향하는 방향이 바뀌어요'};
 const WALLTIP={move:'위로 끌면 멀어지고 아래로 끌면 가까워져요 · 핀치/휠도 돼요',rot:'좌우로 끌면 배경지 각도가 바뀌어요'};
 const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -665,10 +702,10 @@ function setRay(e){
 }
 wall.userData.k='wall';
 function hitLight(e){ // 조명 > 마네킹/바닥 > 벽 순서로 맞은 대상
-  setRay(e);const objs=[floor,head,body,wall];for(const k of LIGHTS)if(st[k].on)objs.push(L[k].pick,L[k].g);
+  setRay(e);const objs=[floor,head,body,wall];if(camObj.visible)objs.push(camModel);for(const k of LIGHTS)if(st[k].on)objs.push(L[k].pick,L[k].g);
   const h=ray.intersectObjects(objs,true)[0];let o=h&&h.object;while(o&&!o.userData.k)o=o.parent;return o?o.userData.k:null;
 }
-const isWall=()=>pick3==='wall',isMq=()=>pick3==='mq',isLight=()=>LIGHTS.includes(pick3);
+const isCam3=()=>pick3==='cam3',isWall=()=>pick3==='wall',isMq=()=>pick3==='mq',isLight=()=>LIGHTS.includes(pick3);
 const dragging=()=>pick3&&(mode==='move'||mode==='rot');
 
 function glow(){
@@ -679,24 +716,25 @@ function glow(){
   wallEdge.visible=isWall();wallMat.emissive.set(isWall()?(mode?MODE[mode].c:'#ffffff'):'#000000');wallMat.emissiveIntensity=.03;
   if(isWall())wallEdge.material.color.set(mode?MODE[mode].c:'#ffffff');
   skinMat.emissive.set(isMq()?MODE.rot.c:'#000000');skinMat.emissiveIntensity=.08;
+  camShell.visible=isCam3();if(isCam3())camShell.material.color.set(mode?MODE[mode].c:'#ffffff');
   req();
 }
 function renderCtx(){
   const m=$('#ctx');m.hidden=!pick3;controls.enabled=!dragging()&&!camOn();
   if(!pick3){glow();return}
-  $('#ctxName').textContent=isWall()?'배경지':isMq()?'마네킹':NAME[pick3]+' 조명';
-  for(const b of m.querySelectorAll('[data-m]'))b.hidden=isMq()&&b.dataset.m!=='rot';
+  $('#ctxName').textContent=isCam3()?'카메라':isWall()?'배경지':isMq()?'마네킹':NAME[pick3]+' 조명';
+  for(const b of m.querySelectorAll('[data-m]'))b.hidden=(isMq()&&b.dataset.m!=='rot')||(isCam3()&&b.dataset.m==='adj');
   for(const b of m.querySelectorAll('[data-m]'))b.setAttribute('aria-pressed',b.dataset.m===mode);
   $('#ctxAdj').hidden=mode!=='adj'||!isLight();$('#ctxWall').hidden=mode!=='adj'||!isWall();$('#aimReset').hidden=mode!=='rot';
-  $('#aimReset').textContent=!isLight()?'정면으로 되돌리기':'피사체 쪽으로 다시 겨누기';
-  $('#ctxTip').textContent=!mode?'모드를 골라주세요':isWall()?WALLTIP[mode]||'':isMq()?'좌우로 끌면 얼굴이 돌아가고, 위아래로 끌면 고개를 숙이거나 들어요':MODE[mode].tip;$('#ctxTip').hidden=mode==='adj';
+  $('#aimReset').textContent=isLight()||isCam3()?'피사체 쪽으로 다시 겨누기':'정면으로 되돌리기';
+  $('#ctxTip').textContent=!mode?'모드를 골라주세요':isCam3()?CAMTIP[mode]:isWall()?WALLTIP[mode]||'':isMq()?'좌우로 끌면 얼굴이 돌아가고, 위아래로 끌면 고개를 숙이거나 들어요':MODE[mode].tip;$('#ctxTip').hidden=mode==='adj';
   syncOutputs();glow();placeCtx();
 }
 function openCtx(k){openQ(false);pick3=k;if(LIGHTS.includes(k)&&sel!==k){sel=k;syncUI()}renderCtx()}
 function closeCtx(){pick3=null;mode=null;renderCtx()}
 function placeCtx(){
   const m=$('#ctx'),W=view.clientWidth,H=view.clientHeight,w=m.offsetWidth,h=m.offsetHeight;
-  const v=!isLight()?new THREE.Vector3(9,9,9):L[pick3].g.position.clone().project(cam);let x,y;
+  const v=isCam3()?camObj.position.clone().project(cam):!isLight()?new THREE.Vector3(9,9,9):L[pick3].g.position.clone().project(cam);let x,y;
   if(v.z>1||Math.abs(v.x)>1||Math.abs(v.y)>1){x=(W-w)/2;y=H-h-34}  // 조명이 화면 밖이면 아래쪽에 고정
   else{const px=(v.x+1)/2*W,py=(1-v.y)/2*H;x=px+44+w<W?px+44:px-44-w;y=py-h/2}
   m.style.left=clamp(x,8,W-w-8)+'px';m.style.top=clamp(y,56,H-h-30)+'px';
@@ -705,7 +743,7 @@ $('#ctx').addEventListener('click',e=>{
   const b=e.target.closest('[data-m]');
   if(b){mode=mode===b.dataset.m?null:b.dataset.m;renderCtx();return}
   if(e.target.closest('#ctxClose'))closeCtx();
-  if(e.target.closest('#aimReset')){if(isWall())st.wallA=0;else if(isMq()){st.turn=0;st.tilt=0}else{st[pick3].yaw=0;st[pick3].pitch=0}update()}
+  if(e.target.closest('#aimReset')){if(isCam3()){st.cm.pan=0;st.cm.tilt=0}else if(isWall())st.wallA=0;else if(isMq()){st.turn=0;st.tilt=0}else{st[pick3].yaw=0;st[pick3].pitch=0}update()}
 });
 $('#ctx').addEventListener('input',e=>{
   if(e.target.id==='w-col'){st.bg=e.target.value;update();return}
@@ -717,6 +755,12 @@ $('#ctx').addEventListener('input',e=>{
 });
 
 // 화면 끌기 방향과 조명 움직임 방향을 맞추기 위한 부호
+function camSign(){ // 카메라 오브젝트를 끄는 방향과 화면상 움직임 방향 맞추기
+  const c=st.cm,save={...c},sx=v=>v.project(cam).x;let a,b;
+  const aim=()=>{const[yw,pt]=camYawPitch();return camPos().add(new THREE.Vector3(Math.sin(yw)*Math.cos(pt),Math.sin(pt),Math.cos(yw)*Math.cos(pt)).multiplyScalar(c.fd))};
+  if(mode==='move'){a=sx(camPos());c.az+=5;b=sx(camPos())}else{a=sx(aim());c.pan+=5;b=sx(aim())}
+  Object.assign(c,save);return b>=a?1:-1;
+}
 function screenSign(){
   const p=st[pick3],q={...p},sx=v=>v.project(cam).x;
   if(mode==='move'){q.az+=5;return sx(lightPos(q))>=sx(lightPos(p))?1:-1}
@@ -729,11 +773,11 @@ view.addEventListener('pointerdown',e=>{
   if(ptrs.size===1){
     gs={id:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now(),moved:false,pinch:0};
     if(camOn()&&!dragging())gs.cam={pan:st.cm.pan,tilt:st.cm.tilt,f:st.cm.f};
-    if(dragging())Object.assign(gs,isMq()?{p:{turn:st.turn,tilt:st.tilt}}:isWall()?{p:{wallD:st.wallD,wallA:st.wallA},sx:cam.position.z>=0?1:-1}:{p:{...st[pick3]},sx:screenSign()});
+    if(dragging())Object.assign(gs,isCam3()?{p:{...st.cm},sx:camSign()}:isMq()?{p:{turn:st.turn,tilt:st.tilt}}:isWall()?{p:{wallD:st.wallD,wallA:st.wallA},sx:cam.position.z>=0?1:-1}:{p:{...st[pick3]},sx:screenSign()});
   }else if(ptrs.size===2&&gs&&gs.cam){
     const[a,b]=[...ptrs.values()];gs.pinch=Math.hypot(a.x-b.x,a.y-b.y);gs.f0=st.cm.f;gs.moved=true;
   }else if(ptrs.size===2&&gs&&dragging()&&mode==='move'&&!isMq()){
-    const[a,b]=[...ptrs.values()];gs.pinch=Math.hypot(a.x-b.x,a.y-b.y);gs.d=isWall()?st.wallD:st[pick3].d;gs.moved=true;
+    const[a,b]=[...ptrs.values()];gs.pinch=Math.hypot(a.x-b.x,a.y-b.y);gs.d=isCam3()?st.cm.dist:isWall()?st.wallD:st[pick3].d;gs.moved=true;
   }
   if(dragging()||camOn()){e.stopPropagation();e.preventDefault();try{view.setPointerCapture(e.pointerId)}catch(_){}}
 },true);
@@ -749,6 +793,14 @@ view.addEventListener('pointermove',e=>{
     update(false);return;
   }
   if(!dragging()||!gs.p)return;
+  if(isCam3()){
+    const c=st.cm;
+    if(ptrs.size>=2&&gs.pinch){const[a,b]=[...ptrs.values()];c.dist=Math.round(clamp(gs.d*gs.pinch/Math.max(Math.hypot(a.x-b.x,a.y-b.y),1),.5,4.5)*20)/20}
+    else if(e.pointerId!==gs.id)return;
+    else if(mode==='move'){c.az=Math.round(wrapA(gs.p.az+gs.sx*dx*.35));c.h=Math.round(clamp(gs.p.h-dy*.005,.3,2.4)*100)/100}
+    else{c.pan=clamp(gs.p.pan+gs.sx*dx*.25,-60,60);c.tilt=clamp(gs.p.tilt-dy*.25,-45,45)}
+    update(false);return;
+  }
   if(isMq()){
     if(e.pointerId!==gs.id)return;
     st.turn=Math.round(clamp(gs.p.turn+dx*.4,-90,90));st.tilt=Math.round(clamp(gs.p.tilt+dy*.2,-25,25));
@@ -799,9 +851,26 @@ view.addEventListener('wheel',e=>{ // 카메라 모드 휠 → 줌
 },{capture:true,passive:false});
 view.addEventListener('wheel',e=>{ // 이동 모드에서 휠 → 조명 거리
   if(!(pick3&&mode==='move')||isMq())return;
-  e.preventDefault();e.stopPropagation();const f=1+e.deltaY*.001;if(isWall())st.wallD=clampW(st.wallD*f);else st[pick3].d=clampD(st[pick3].d*f);update();
+  e.preventDefault();e.stopPropagation();const f=1+e.deltaY*.001;if(isCam3())st.cm.dist=Math.round(clamp(st.cm.dist*f,.5,4.5)*20)/20;else if(isWall())st.wallD=clampW(st.wallD*f);else st[pick3].d=clampD(st[pick3].d*f);update();
 },{capture:true,passive:false});
 $('#tabs').addEventListener('click',()=>{if(isLight()&&pick3!==sel){pick3=sel;renderCtx()}});
+
+/* ---------- 카메라 위치 저장 ---------- */
+const SKEY='litesim-cams',CAM_KEYS=['az','dist','h','pan','tilt','f','Ni','fd','af'];
+const pickCam=o=>Object.fromEntries(CAM_KEYS.map(k=>[k,o[k]]));
+let saves=[];try{saves=JSON.parse(localStorage.getItem(SKEY)||'[]')||[]}catch(e){}
+const storeSaves=()=>{try{localStorage.setItem(SKEY,JSON.stringify(saves))}catch(e){}};
+function drawSaves(){
+  $('#saves').innerHTML=saves.length?saves.map((s,i)=>`<span class="save"><button class="load" data-i="${i}">위치 ${s.n}<small>${s.cm.f}mm</small></button><button class="del" data-del="${i}" aria-label="위치 ${s.n} 삭제">✕</button></span>`).join(''):'<span class="empty">저장된 위치가 없어요</span>';
+}
+function loadCam(c){Object.assign(st.cm,c);if(!camOn())setCamMode(true);else update()}
+$('#saveCam').onclick=()=>{saves.push({n:Math.max(0,...saves.map(s=>s.n))+1,cm:pickCam(st.cm)});storeSaves();drawSaves();$('#saves').scrollLeft=1e6};
+$('#saves').addEventListener('click',e=>{
+  const d=e.target.closest('[data-del]');if(d){saves.splice(+d.dataset.del,1);storeSaves();drawSaves();return}
+  const l=e.target.closest('[data-i]');if(l)loadCam(saves[+l.dataset.i].cm);
+});
+$('#homeCam').onclick=()=>loadCam(pickCam(GBASE.cm));
+drawSaves();
 
 setCamMode(st.cm.on);syncUI();update(false);ratio();
 }
