@@ -23,4 +23,7 @@ assert "<!--ASSETS-->" in src, "src/index.src.html 에 <!--ASSETS--> 자리가 �
 i18n = (ROOT / "src/i18n.js").read_text(encoding="utf-8")
 src = src.replace("<!--I18N-->", "<script>\n" + i18n + "</script>")
 (ROOT / "index.html").write_text(src.replace("<!--ASSETS-->", assets), encoding="utf-8")
-print("index.html 생성 완료")
+photo = (ROOT / "src/photo.src.html").read_text(encoding="utf-8")
+assert "<!--I18N-->" in photo
+(ROOT / "photo.html").write_text(photo.replace("<!--I18N-->", "<script>\n" + i18n + "</script>"), encoding="utf-8")
+print("index.html, photo.html 생성 완료")

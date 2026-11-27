@@ -3,6 +3,15 @@
 const LANGS={ko:'한국어',en:'English',ja:'日本語'};
 const I18N={
 en:{
+'사진 리라이팅':'Photo relighting','사진 리라이팅 (베타)':'Photo relighting (beta)','사진 리라이팅 (베타) →':'Photo relighting (beta) →',
+'사진을 끌어다 놓거나 골라 주세요. 사진은 이 기기 밖으로 나가지 않아요.':'Drop a photo here or pick one. Your photo never leaves this device.',
+'사진 고르기':'Pick photo','원본':'Original','조명 추가':'Relit','원본 비교':'Compare','3D 시뮬레이터로':'Back to 3D simulator','결과 저장':'Save result',
+'AI로 사진의 입체를 추정해서 조명을 더해 봐요. 처음 한 번은 모델(약 20~30MB)을 내려받아요.':'AI estimates the 3D shape of your photo so you can add lights to it. The model (about 20–30 MB) downloads the first time.',
+'더할 조명':'Lights to add','공을 눌러 빛이 들어오는 방향을 정하세요. 밝은 점이 빛을 받는 쪽이에요.':'Tap the ball to set where the light comes from. The bright spot is the lit side.',
+'뒤에서 비추기(림)':'Light from behind (rim)',
+'원래 찍힌 강한 그림자를 완전히 지우거나, 조명 방향을 정반대로 뒤집는 건 어려워요. 빛을 더하는 쪽이 가장 자연스러워요. 입체는 사진 한 장에서 추정한 값이라 실제와 다를 수 있어요.':'Fully removing strong existing shadows or flipping the light direction is hard. Adding light looks most natural. The 3D shape is estimated from a single photo, so it may differ from reality.',
+'깊이 추정:':'Depth estimation:','원래 빛':'Original light','기존 그림자 펴기':'Soften existing shadows','입체감':'Depth strength','배경 감쇠':'Background falloff',
+'모델 내려받는 중 {0}%':'Downloading model {0}%','모델 준비 중…':'Preparing model…','입체 추정 중…':'Estimating depth…','입체를 추정하지 못했어요':'Could not estimate depth',
 '라이팅 시뮬레이터':'Lighting Simulator',
 '배치도에서 조명을 끌어 옮기면 그림자가 바로 바뀌어요.':'Drag lights on the floor plan and the shadows update instantly.',
 '얼굴 모델 불러오는 중…':'Loading face model…','얼굴 모델을 불러오지 못했어요':'Could not load the face model',
@@ -54,6 +63,15 @@ en:{
 '여기서는 바로 저장이 안 돼요. 사진을 길게 누르거나 오른쪽 클릭해서 저장해 주세요.':'Direct saving isn\'t available here. Long-press or right-click the photo to save it.'
 },
 ja:{
+'사진 리라이팅':'写真リライティング','사진 리라이팅 (베타)':'写真リライティング（ベータ）','사진 리라이팅 (베타) →':'写真リライティング（ベータ）→',
+'사진을 끌어다 놓거나 골라 주세요. 사진은 이 기기 밖으로 나가지 않아요.':'写真をドロップするか選んでください。写真はこの端末の外に送られません。',
+'사진 고르기':'写真を選ぶ','원본':'元の写真','조명 추가':'ライト追加','원본 비교':'比較','3D 시뮬레이터로':'3Dシミュレーターへ','결과 저장':'結果を保存',
+'AI로 사진의 입체를 추정해서 조명을 더해 봐요. 처음 한 번은 모델(약 20~30MB)을 내려받아요.':'AIで写真の立体を推定してライトを足してみます。初回のみモデル（約20〜30MB）をダウンロードします。',
+'더할 조명':'足すライト','공을 눌러 빛이 들어오는 방향을 정하세요. 밝은 점이 빛을 받는 쪽이에요.':'球を押して光の来る方向を決めます。明るい点が光の当たる側です。',
+'뒤에서 비추기(림)':'後ろから照らす（リム）',
+'원래 찍힌 강한 그림자를 완전히 지우거나, 조명 방향을 정반대로 뒤집는 건 어려워요. 빛을 더하는 쪽이 가장 자연스러워요. 입체는 사진 한 장에서 추정한 값이라 실제와 다를 수 있어요.':'元の強い影を完全に消したり、光の向きを真逆にするのは難しいです。光を足す方向がいちばん自然です。立体は写真1枚から推定した値なので実際と違うことがあります。',
+'깊이 추정:':'深度推定:','원래 빛':'元の光','기존 그림자 펴기':'元の影をやわらげる','입체감':'立体感','배경 감쇠':'背景の減衰',
+'모델 내려받는 중 {0}%':'モデルをダウンロード中 {0}%','모델 준비 중…':'モデル準備中…','입체 추정 중…':'立体を推定中…','입체를 추정하지 못했어요':'立体を推定できませんでした',
 '라이팅 시뮬레이터':'ライティングシミュレーター',
 '배치도에서 조명을 끌어 옮기면 그림자가 바로 바뀌어요.':'配置図でライトをドラッグすると、影がすぐに変わります。',
 '얼굴 모델 불러오는 중…':'顔モデルを読み込み中…','얼굴 모델을 불러오지 못했어요':'顔モデルを読み込めませんでした',
