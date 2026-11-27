@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>라이팅 시뮬레이터</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=IBM+Plex+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 /* VOICE: 촬영 현장의 실용 도구, 조용하고 정확하게
    IDEA: 스튜디오 라이팅 다이어그램(위에서 본 배치도) + 테더링 모니터
@@ -19,7 +19,7 @@
   --chip:light-dark(#f1efeb,#2a2b2f)}
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans KR",system-ui,sans-serif;overflow-x:clip}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans KR","IBM Plex Sans JP",system-ui,sans-serif;overflow-x:clip}
 .app{display:grid;grid-template-columns:minmax(0,1fr) 380px;height:100dvh}
 .left{display:flex;flex-direction:column;min-height:0;min-width:0}
 .view{position:relative;background:#2b2b2d;overflow:hidden;flex:1;min-height:0}
@@ -62,6 +62,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .chips button[aria-pressed=true]{background:#2457e6;border-color:#2457e6;color:#fff}
 .qcam input[type=range]{width:100%;height:28px;accent-color:#8aabff;margin:4px 0 0}
 .q-c{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:2px}.top h1{margin:0}.top select{flex:none}
 .sel{font:inherit;font-size:14px;min-height:40px;padding:0 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
 .seg{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 8px}
 .seg button{border:1px solid var(--line);background:var(--chip);border-radius:8px;min-height:36px;padding:0 10px;font-size:13px}
@@ -131,109 +132,120 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
     <div class="pill caminfo" id="camInfo" hidden></div>
     <div class="focusbox" id="focusBox" hidden></div>
     <div class="hud">
-      <span class="pill" id="ratio">키:필 —</span>
-      <span style="display:flex;gap:6px"><button class="pill pill-btn" id="mqBtn">마네킹</button><button class="pill pill-btn" id="wallBtn">벽 조절</button><button class="pill pill-btn" id="camWide" aria-pressed="false">전체 보기</button><button class="pill pill-btn" id="camReset" aria-pressed="true">카메라</button></span>
+      <span class="pill" id="ratio" data-t>키:필 —</span>
+      <span style="display:flex;gap:6px"><button class="pill pill-btn" id="mqBtn" data-t>마네킹</button><button class="pill pill-btn" id="wallBtn" data-t>벽 조절</button><button class="pill pill-btn" id="camWide" aria-pressed="false" data-t>전체 보기</button><button class="pill pill-btn" id="camReset" aria-pressed="true" data-t>카메라</button></span>
     </div>
-    <div class="pill" id="loading" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)">얼굴 모델 불러오는 중…</div>
+    <div class="pill" id="loading" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)" data-t>얼굴 모델 불러오는 중…</div>
     <div class="hint" id="hint"></div>
     <div class="refine" id="refine" hidden></div>
     <div class="ctx qcam" id="qcam" hidden>
-      <div class="ctx-h"><b>카메라 설정</b><button id="qClose" aria-label="닫기">✕</button></div>
-      <div class="q-l"><span>렌즈</span><output id="oq-f"></output></div>
+      <div class="ctx-h"><b data-t>카메라 설정</b><button id="qClose" aria-label="닫기" data-ta="aria-label">✕</button></div>
+      <div class="q-l"><span data-t>렌즈</span><output id="oq-f"></output></div>
       <div class="chips" id="qF"></div><input type="range" id="q-f" min="24" max="200" step="1">
-      <div class="q-l"><span>조리개</span><output id="oq-Ni"></output></div>
+      <div class="q-l"><span data-t>조리개</span><output id="oq-Ni"></output></div>
       <div class="chips" id="qN"></div>
-      <div class="q-l"><span>초점</span><output id="oq-fd"></output></div>
-      <div class="chips"><button id="qAF">얼굴 AF</button></div><input type="range" id="q-fd" min=".3" max="6" step=".01">
-      <div class="q-l"><span>화면비</span></div><div class="chips" id="qAR"></div>
-      <div class="q-l"><span>격자</span></div><div class="chips" id="qGrid"></div>
-      <label class="q-c"><input type="checkbox" id="q-dc"> 렌즈 왜곡 보정</label>
+      <div class="q-l"><span data-t>초점</span><output id="oq-fd"></output></div>
+      <div class="chips"><button id="qAF" data-t>얼굴 AF</button></div><input type="range" id="q-fd" min=".3" max="6" step=".01">
+      <div class="q-l"><span data-t>화면비</span></div><div class="chips" id="qAR"></div>
+      <div class="q-l"><span data-t>격자</span></div><div class="chips" id="qGrid"></div>
+      <label class="q-c"><input type="checkbox" id="q-dc"> <span data-t>렌즈 왜곡 보정</span></label>
     </div>
     <div class="ctx" id="ctx" hidden>
-      <div class="ctx-h"><b id="ctxName">키 조명</b><button id="ctxClose" aria-label="닫기">✕</button></div>
+      <div class="ctx-h"><b id="ctxName" data-t>키 조명</b><button id="ctxClose" aria-label="닫기" data-ta="aria-label">✕</button></div>
       <div class="ctx-m">
-        <button data-m="move" style="--mc:#ff3d7f" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg><span class="ml">이동</span><i></i></button>
-        <button data-m="rot" style="--mc:#2f7bff" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg><span class="ml">회전</span><i></i></button>
-        <button data-m="adj" style="--mc:#ffd21f" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span class="ml">조절</span><i></i></button>
+        <button data-m="move" style="--mc:#ff3d7f" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg><span class="ml" data-t>이동</span><i></i></button>
+        <button data-m="rot" style="--mc:#2f7bff" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg><span class="ml" data-t>회전</span><i></i></button>
+        <button data-m="adj" style="--mc:#ffd21f" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span class="ml" data-t>조절</span><i></i></button>
       </div>
       <p class="ctx-tip" id="ctxTip"></p>
-      <button class="ctx-sub" id="aimReset" hidden>피사체 쪽으로 다시 겨누기</button>
-      <div id="ctxPose" hidden><details class="fold"><summary>종류 · 자세 프리셋</summary><div class="q-l"><span>종류</span></div><div class="chips" id="cMqType"></div><div class="q-l"><span>자세</span></div><div class="chips" id="cPose"></div></details>
-        <div id="jEdit"><div class="q-l"><span>관절</span><output id="selJn">팔다리를 탭하세요</output></div>
-        <div class="chips"><button id="twistBtn" aria-pressed="false">비틀기</button><button id="jReset">이 관절 초기화</button></div>
+      <button class="ctx-sub" id="aimReset" hidden data-t>피사체 쪽으로 다시 겨누기</button>
+      <div id="ctxPose" hidden><details class="fold"><summary data-t>종류 · 자세 프리셋</summary><div class="q-l"><span data-t>종류</span></div><div class="chips" id="cMqType"></div><div class="q-l"><span data-t>자세</span></div><div class="chips" id="cPose"></div></details>
+        <div id="jEdit"><div class="q-l"><span data-t>관절</span><output id="selJn" data-t>팔다리를 탭하세요</output></div>
+        <div class="chips"><button id="twistBtn" aria-pressed="false" data-t>비틀기</button><button id="jReset" data-t>이 관절 초기화</button></div>
         <p class="ctx-tip" id="jTip"></p></div></div>
-      <div id="ctxWall" hidden><div class="line"><span>배경지 색</span><input type="color" id="w-col"></div></div>
+      <div id="ctxWall" hidden><div class="line"><span data-t>배경지 색</span><input type="color" id="w-col"></div></div>
       <div id="ctxAdj" hidden>
-        <label class="row"><span>세기</span><output id="oa-pow"></output><input type="range" id="a-pow" min="0" max="100" step="1"></label>
-        <label class="row"><span>크기</span><output id="oa-size"></output><input type="range" id="a-size" min="0" max="100" step="1"></label>
-        <div class="line"><label><input type="checkbox" id="a-on"> 켜기</label><label>색 <input type="color" id="a-col"></label></div>
+        <label class="row"><span data-t>세기</span><output id="oa-pow"></output><input type="range" id="a-pow" min="0" max="100" step="1"></label>
+        <label class="row"><span data-t>크기</span><output id="oa-size"></output><input type="range" id="a-size" min="0" max="100" step="1"></label>
+        <div class="line"><label><input type="checkbox" id="a-on"> <span data-t>켜기</span></label><label><span data-t>색</span> <input type="color" id="a-col"></label></div>
       </div>
     </div>
   </div>
   <div class="cambar">
-    <button id="saveCam">＋ 현재 카메라 저장</button>
+    <button id="saveCam" data-t>＋ 현재 카메라 저장</button>
     <div class="saves" id="saves"></div>
-    <button id="homeCam">초기 위치</button>
-    <button id="shareBtn">링크 공유</button>
-    <button id="photoBtn">사진 저장</button>
+    <button id="homeCam" data-t>초기 위치</button>
+    <button id="shareBtn" data-t>링크 공유</button>
+    <button id="photoBtn" data-t>사진 저장</button>
   </div>
   </div>
   <aside class="panel">
-    <h1>라이팅 시뮬레이터</h1>
-    <p class="sub">배치도에서 조명을 끌어 옮기면 그림자가 바로 바뀌어요.</p>
+    <div class="top"><h1 data-t>라이팅 시뮬레이터</h1><select id="lang" class="sel" aria-label="Language"></select></div>
+    <p class="sub" data-t>배치도에서 조명을 끌어 옮기면 그림자가 바로 바뀌어요.</p>
 
-    <h2>프리셋</h2>
+    <h2 data-t>프리셋</h2>
     <div class="presets" id="presets"></div>
 
-    <h2>위에서 본 배치도 (1칸 = 1m)</h2>
-    <div class="mapwrap"><svg id="map" viewBox="-4.4 -4.4 8.8 8.8" aria-label="조명 배치도"></svg></div>
+    <h2 data-t>위에서 본 배치도 (1칸 = 1m)</h2>
+    <div class="mapwrap"><svg id="map" viewBox="-4.4 -4.4 8.8 8.8" aria-label="조명 배치도" data-ta="aria-label"></svg></div>
 
-    <h2>조명</h2>
+    <h2 data-t>조명</h2>
     <div class="tabs" id="tabs"></div>
     <div class="line">
-      <label><input type="checkbox" id="on"> 켜기</label>
-      <label>색 <input type="color" id="col"></label>
+      <label><input type="checkbox" id="on"> <span data-t>켜기</span></label>
+      <label><span data-t>색</span> <input type="color" id="col"></label>
     </div>
     <div id="lightCtrls"></div>
-    <p class="note">방향 0°는 카메라 쪽, ±90°는 옆, 180°는 피사체 뒤예요.</p>
+    <p class="note" data-t>방향 0°는 카메라 쪽, ±90°는 옆, 180°는 피사체 뒤예요.</p>
 
-    <h2>마네킹</h2>
+    <h2 data-t>마네킹</h2>
     <div class="seg" id="mqType"></div>
-    <div class="line" style="margin:4px 0 0;min-height:0"><span>자세</span></div><div class="seg" id="poseSeg"></div>
-    <div class="line"><span>관절</span><select id="jointSel" class="sel"></select></div>
+    <div class="line" style="margin:4px 0 0;min-height:0"><span data-t>자세</span></div><div class="seg" id="poseSeg"></div>
+    <div class="line"><span data-t>관절</span><select id="jointSel" class="sel"></select></div>
     <div id="jointCtrls"></div>
-    <p class="note" id="poseNote">왼쪽·오른쪽은 인형 기준이에요. 3D 화면의 마네킹 메뉴 → 자세에서 팔다리를 직접 잡아 움직일 수도 있어요. 흉상은 자세를 바꿀 수 없어요. 얼굴 방향·고개·몸 방향은 아래 "전체"에 있어요.</p>
+    <p class="note" id="poseNote" data-t>왼쪽·오른쪽은 인형 기준이에요. 3D 화면의 마네킹 메뉴 → 자세에서 팔다리를 직접 잡아 움직일 수도 있어요. 흉상은 자세를 바꿀 수 없어요. 얼굴 방향·고개·몸 방향은 아래 "전체"에 있어요.</p>
 
-    <h2>카메라</h2>
-    <div class="line" style="margin:4px 0 0;min-height:0"><span>화면비</span></div><div class="seg" id="arSeg"></div>
-    <div class="line" style="margin:4px 0 0;min-height:0"><span>격자</span></div><div class="seg" id="gridSeg"></div>
+    <h2 data-t>카메라</h2>
+    <div class="line" style="margin:4px 0 0;min-height:0"><span data-t>화면비</span></div><div class="seg" id="arSeg"></div>
+    <div class="line" style="margin:4px 0 0;min-height:0"><span data-t>격자</span></div><div class="seg" id="gridSeg"></div>
     <div id="camCtrls"></div>
-    <div class="line"><label><input type="checkbox" id="af"> 얼굴 자동 초점(AF)</label><label><input type="checkbox" id="dc"> 렌즈 왜곡 보정</label></div>
-    <p class="note">카메라 모드에서 화면을 끌면 카메라 방향, 핀치/휠은 줌, 탭하면 그 지점에 초점(MF)이 맞아요. 배치도의 카메라도 끌어서 옮길 수 있어요. 심도(배경 흐림)는 멈춘 뒤 다듬는 동안 나타나요.</p>
+    <div class="line"><label><input type="checkbox" id="af"> <span data-t>얼굴 자동 초점(AF)</span></label><label><input type="checkbox" id="dc"> <span data-t>렌즈 왜곡 보정</span></label></div>
+    <p class="note" data-t>카메라 모드에서 화면을 끌면 카메라 방향, 핀치/휠은 줌, 탭하면 그 지점에 초점(MF)이 맞아요. 배치도의 카메라도 끌어서 옮길 수 있어요. 심도(배경 흐림)는 멈춘 뒤 다듬는 동안 나타나요.</p>
 
-    <h2>전체</h2>
+    <h2 data-t>전체</h2>
     <div id="globalCtrls"></div>
-    <div class="line"><span>배경지 색</span><input type="color" id="bg"></div>
+    <div class="line"><span data-t>배경지 색</span><input type="color" id="bg"></div>
 
-    <div class="foot"><button id="reset">기본값으로</button></div>
-    <p class="note" style="margin-top:14px">얼굴 모델: <a href="https://creativecommons.org/licenses/by/3.0/">Infinite, 3D Head Scan by Lee Perry-Smith</a> (CC BY 3.0), 재질만 변경</p>
+    <div class="foot"><button id="reset" data-t>기본값으로</button></div>
+    <p class="note" style="margin-top:14px"><span data-t>얼굴 모델:</span> <a href="https://creativecommons.org/licenses/by/3.0/">Infinite, 3D Head Scan by Lee Perry-Smith</a> (CC BY 3.0), <span data-t>재질만 변경</span></p>
   </aside>
 </div>
 
 <div class="dlg" id="dlg" hidden><div class="dlg-box" role="dialog" aria-modal="true" aria-labelledby="dlgT">
-  <div class="ctx-h"><b id="dlgT"></b><button id="dlgClose" aria-label="닫기">✕</button></div>
+  <div class="ctx-h"><b id="dlgT"></b><button id="dlgClose" aria-label="닫기" data-ta="aria-label">✕</button></div>
   <p class="dlg-msg" id="dlgMsg"></p>
   <input class="dlg-in" id="dlgIn" readonly hidden>
-  <img class="dlg-img" id="dlgImg" alt="저장할 사진" hidden>
-  <div class="dlg-act"><button id="dlgCopy" hidden>다시 복사</button></div>
+  <img class="dlg-img" id="dlgImg" alt="저장할 사진" data-ta="alt" hidden>
+  <div class="dlg-act"><button id="dlgCopy" hidden data-t>다시 복사</button></div>
 </div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <!--ASSETS-->
+<!--I18N-->
 <script>
 {
 const $=s=>document.querySelector(s);
+/* ---------- 다국어 (사전: src/i18n.js) ---------- */
+let lang=(()=>{try{const v=localStorage.getItem('litesim-lang');if(v&&LANGS[v])return v}catch(e){}const n=(navigator.language||'ko').slice(0,2).toLowerCase();return LANGS[n]?n:'en'})();
+const tr=(k,...a)=>{const d=lang!=='ko'&&I18N[lang];const v=(d&&d[k])||k;return a.length?v.replace(/\{(\d)\}/g,(m,i)=>a[+i]):v};
+function applyLang(){ // 화면에 고정된 문구 바꾸기. 원문(한국어)은 처음 한 번 data-ko에 보관
+  document.documentElement.lang=lang;document.title=tr('라이팅 시뮬레이터');
+  for(const el of document.querySelectorAll('[data-t]')){if(!el.dataset.ko)el.dataset.ko=el.textContent.trim();el.textContent=tr(el.dataset.ko)}
+  for(const el of document.querySelectorAll('[data-ta]')){const a=el.dataset.ta;if(!el.dataset.koa)el.dataset.koa=el.getAttribute(a);el.setAttribute(a,tr(el.dataset.koa))}
+  $('#lang').innerHTML=Object.entries(LANGS).map(([k,n])=>`<option value="${k}">${n}</option>`).join('');$('#lang').value=lang;
+}
+applyLang();
 /* ---------- PCSS: 광원 크기에 따라 가까우면 선명, 멀수록 퍼지는 그림자 ---------- */
 const SHADOW_NEAR=.2,SHADOW_FAR=9,SHADOW_FW=2*Math.tan(Math.PI/5); // 스포트라이트 각도 π/5 기준, 거리 1m에서 그림자 맵 폭
 {
@@ -328,7 +340,7 @@ let save=()=>{try{localStorage.setItem('litesim1',JSON.stringify(st))}catch(e){}
 
 const sizeM=s=>0.12+s/100*0.9;
 const sizeName=s=>s<15?'맨 플래시':s<40?'소형 소프트박스':s<70?'중형 소프트박스':'대형 옥타';
-const sizeLabel=v=>`${sizeName(v)} · ${Math.round(sizeM(v)*100)}cm`;
+const sizeLabel=v=>`${tr(sizeName(v))} · ${Math.round(sizeM(v)*100)}cm`;
 const CTRL=[
   ['az','방향',-180,180,1,v=>`${v}°`],
   ['el','높이',-40,85,1,v=>`${v}°`],
@@ -345,13 +357,17 @@ const GCTRL=[
   ['wallD','배경지 거리',.4,4,.05,v=>`${(+v).toFixed(2)} m`],
   ['wallA','배경지 각도',-60,60,1,v=>`${v}°`]
 ];
-const rowHTML=(p,[k,t,mn,mx,stp])=>`<label class="row"><span>${t}</span><output id="o${p}${k}"></output><input type="range" id="${p}${k}" min="${mn}" max="${mx}" step="${stp}"></label>`;
+const rowHTML=(p,[k,t,mn,mx,stp])=>`<label class="row"><span>${tr(t)}</span><output id="o${p}${k}"></output><input type="range" id="${p}${k}" min="${mn}" max="${mx}" step="${stp}"></label>`;
+function buildRows(){
+$('#presets').innerHTML=PRESETS.map((p,i)=>`<button data-p="${i}">${tr(p.n)}</button>`).join('');
 $('#lightCtrls').innerHTML=CTRL.map(c=>rowHTML('c-',c)).join('');
 $('#globalCtrls').innerHTML=GCTRL.map(c=>rowHTML('g-',c)).join('');
 $('#camCtrls').innerHTML=CAMCTRL.map(c=>rowHTML('k-',c)).join('');
 $('#jointCtrls').innerHTML=JCTRL.map(([k,t])=>rowHTML('p-',[k,t,-180,180,1])).join('');
-$('#jointSel').innerHTML=JOINTS.map(([k,n])=>`<option value="${k}">${n}</option>`).join('');
-$('#presets').innerHTML=PRESETS.map((p,i)=>`<button data-p="${i}">${p.n}</button>`).join('');
+{const v=$('#jointSel').value;$('#jointSel').innerHTML=JOINTS.map(([k,n])=>`<option value="${k}">${tr(n)}</option>`).join('');if(v)$('#jointSel').value=v}
+}
+buildRows();
+
 
 /* ---------- 3D ---------- */
 const view=$('#view');
@@ -385,7 +401,7 @@ const PIV=1.43,head=new THREE.Group(),body=new THREE.Group();head.position.y=PIV
 const skinMat=new THREE.MeshStandardMaterial({color:0xd8cdc2,roughness:.6,side:THREE.DoubleSide});
 /* 얼굴: Lee Perry-Smith 헤드 스캔 (CC BY 3.0) */
 const normalMap=new THREE.TextureLoader().load(HEAD_NRM,req);
-const loadFail=e=>{$('#loading').textContent='얼굴 모델을 불러오지 못했어요: '+String(e&&e.message||e).slice(0,80)};
+const loadFail=e=>{$('#loading').textContent=tr('얼굴 모델을 불러오지 못했어요')+': '+String(e&&e.message||e).slice(0,80)};
 try{
 const glb=Uint8Array.from(atob(HEAD_GLB),c=>c.charCodeAt(0)).buffer;
 new THREE.GLTFLoader().parse(glb,'',g=>{
@@ -545,7 +561,7 @@ function drawOv(){
   if(c.grid==='cross'){const cx=x+w/2,cy=y+h/2;o+=`<line class="ov-grid" x1="${f(cx-14)}" y1="${f(cy)}" x2="${f(cx+14)}" y2="${f(cy)}"/><line class="ov-grid" x1="${f(cx)}" y1="${f(cy-14)}" x2="${f(cx)}" y2="${f(cy+14)}"/>`}
   ov.innerHTML=o;
   info.style.left=(x+w/2)+'px';info.style.top=(y+h-8)+'px';
-  info.textContent=`${c.f}mm · f/${STOPS[c.Ni]} · 초점 ${c.fd.toFixed(2)}m${c.af?' (얼굴 AF)':' (MF)'} · ${c.ar}`;
+  info.textContent=`${c.f}mm · f/${STOPS[c.Ni]} · ${tr('초점')} ${c.fd.toFixed(2)}m${c.af?' ('+tr('얼굴 AF')+')':' (MF)'} · ${c.ar}`;
 }
 function updateCamObj(){
   const on=!camOn();camObj.visible=camPole.visible=on;if(!on)return;
@@ -562,7 +578,7 @@ function setCamMode(on){
   st.cm.on=on;controls.enabled=!on;
   if(!on){cam.fov=32;cam.updateProjectionMatrix()}
   $('#camReset').setAttribute('aria-pressed',on);$('#camWide').setAttribute('aria-pressed',!on);
-  $('#hint').textContent=on?'끌기: 카메라 방향 · 핀치/휠: 줌 · 탭: 초점 맞추기 / 조명 메뉴':'조명·카메라 탭: 메뉴 · 빈 곳 드래그: 시점 회전';
+  $('#hint').textContent=tr(on?'끌기: 카메라 방향 · 핀치/휠: 줌 · 탭: 초점 맞추기 / 조명 메뉴':'조명·카메라 탭: 메뉴 · 빈 곳 드래그: 시점 회전');
   update();
 }
 
@@ -646,7 +662,7 @@ function refineStep(){
   quad.material=blendMat;renderer.setRenderTarget(rtB);renderer.render(quadScene,quadCam);
   [rtA,rtB]=[rtB,rtA];rk++;
   if(rk>=RSHOW)showTex(rtA.texture);
-  const r=$('#refine');r.hidden=rk>=RN;r.textContent=`다듬는 중 ${Math.round(rk/RN*100)}%`;
+  const r=$('#refine');r.hidden=rk>=RN;r.textContent=tr('다듬는 중 {0}%',Math.round(rk/RN*100));
 }
 (function loop(){
   requestAnimationFrame(loop);
@@ -662,7 +678,7 @@ const setCam=(p,ty)=>{ // 남아 있는 회전 관성을 먼저 없앤 뒤 이�
   controls.enableDamping=true;req();
 };
 function openQ(on){
-  const q=$('#qcam');q.hidden=!on;$('#camReset').textContent=on?'카메라 ▴':'카메라';
+  const q=$('#qcam');q.hidden=!on;$('#camReset').textContent=tr('카메라')+(on?' ▴':'');
   if(on){if(pick3)closeCtx();q.style.top=(document.querySelector('.hud').offsetHeight+18)+'px';q.style.right='12px';syncOutputs()}
 }
 $('#camReset').onclick=()=>{if(!camOn()){setCamMode(true);openQ(true)}else openQ($('#qcam').hidden)};
@@ -690,17 +706,17 @@ function drawMap(){
   let h='';
   for(let r=1;r<=4;r++)h+=`<circle class="ring" r="${r}"/><text class="rl" x="${(r*.707+.05).toFixed(2)}" y="${(-r*.707).toFixed(2)}">${r}m</text>`;
   {const wa=st.wallA*D2R,cx=-Math.sin(wa)*st.wallD,cz=-Math.cos(wa)*st.wallD,ux=Math.cos(wa),uz=-Math.sin(wa),f=n=>n.toFixed(3);
-   h+=`<line class="wall" x1="${f(cx-ux*7)}" y1="${f(cz-uz*7)}" x2="${f(cx+ux*7)}" y2="${f(cz+uz*7)}"/><text class="rl" x="${f(cx-ux*1.2-Math.sin(wa)*.12)}" y="${f(cz-uz*1.2-Math.cos(wa)*.12)}">배경지</text>`}
+   h+=`<line class="wall" x1="${f(cx-ux*7)}" y1="${f(cz-uz*7)}" x2="${f(cx+ux*7)}" y2="${f(cz+uz*7)}"/><text class="rl" x="${f(cx-ux*1.2-Math.sin(wa)*.12)}" y="${f(cz-uz*1.2-Math.cos(wa)*.12)}">${tr('배경지')}</text>`}
   {const cp=camPos(),[yw]=camYawPitch(),fr=frameRect(),hh=Math.atan(frameHalfTan()*fr.aw/fr.ah),f=n=>n.toFixed(3);
    for(const s of[-1,1])h+=`<line class="fov" x1="${f(cp.x)}" y1="${f(cp.z)}" x2="${f(cp.x+Math.sin(yw+s*hh)*6)}" y2="${f(cp.z+Math.cos(yw+s*hh)*6)}"/>`;
-   h+=`<g transform="translate(${f(cp.x)} ${f(cp.z)}) rotate(${(180-yw/D2R).toFixed(1)})"><rect class="camg" x="-.22" y="-.12" width=".44" height=".28" rx=".05"/><rect class="camg" x="-.1" y="-.24" width=".2" height=".14"/><circle data-cam="1" r=".38" fill="transparent" style="cursor:grab"/></g><text class="rl" x="${f(cp.x+.32)}" y="${f(cp.z+.3)}">카메라</text>`}
+   h+=`<g transform="translate(${f(cp.x)} ${f(cp.z)}) rotate(${(180-yw/D2R).toFixed(1)})"><rect class="camg" x="-.22" y="-.12" width=".44" height=".28" rx=".05"/><rect class="camg" x="-.1" y="-.24" width=".2" height=".14"/><circle data-cam="1" r=".38" fill="transparent" style="cursor:grab"/></g><text class="rl" x="${f(cp.x+.32)}" y="${f(cp.z+.3)}">${tr('카메라')}</text>`}
   h+=`<g transform="rotate(${-st.turn})"><ellipse class="subj" rx=".2" ry=".24"/><path class="camg" d="M-.06 .22 L0 .34 L.06 .22Z"/></g>`;
   for(const k of LIGHTS){
     const p=st[k],dh=p.d*Math.cos(p.el*D2R),az=p.az*D2R,x=Math.sin(az)*dh,y=Math.cos(az)*dh,w=sizeM(p.size),ap=aimPoint(p);
     h+=`<g class="${p.on?'':'off'}"><line class="beam" x1="${ap.x.toFixed(3)}" y1="${ap.z.toFixed(3)}" x2="${x.toFixed(3)}" y2="${y.toFixed(3)}"/>`+
        `<g transform="translate(${x.toFixed(3)} ${y.toFixed(3)}) rotate(${-(p.az+(p.yaw||0))})"><rect class="box" x="${(-w/2).toFixed(3)}" y="-.06" width="${w.toFixed(3)}" height=".12" rx=".03"/></g>`+
        `<circle data-k="${k}" class="h${k===sel?' sel':''}" cx="${x.toFixed(3)}" cy="${y.toFixed(3)}" r=".3" fill="${p.col}"/>`+
-       `<text class="ht" x="${x.toFixed(3)}" y="${y.toFixed(3)}">${NAME[k]}</text></g>`;
+       `<text class="ht" x="${x.toFixed(3)}" y="${y.toFixed(3)}">${tr(NAME[k])[0]}</text></g>`;
   }
   map.innerHTML=h;
 }
@@ -728,36 +744,36 @@ function syncOutputs(){
   for(const [k,,,,,f] of CTRL){$('#c-'+k).value=st[sel][k];$('#oc-'+k).textContent=f(st[sel][k])}
   for(const [k,,,,,f] of GCTRL){$('#g-'+k).value=st[k];$('#og-'+k).textContent=f(st[k])}
   for(const [k,,,,,f] of CAMCTRL){$('#k-'+k).value=st.cm[k];$('#ok-'+k).textContent=f(st.cm[k])}
-  {const pr=on=>`aria-pressed="${on}"`,tp=Object.entries(MQTYPES).map(([k,n])=>`<button data-mqt="${k}" ${pr(st.mq===k)}>${n}</button>`).join(''),
-     ps=POSES.map((q,i)=>`<button data-pose="${i}" ${pr(JSON.stringify(q.p)===JSON.stringify(st.pose))}>${q.n}</button>`).join('');
+  {const pr=on=>`aria-pressed="${on}"`,tp=Object.entries(MQTYPES).map(([k,n])=>`<button data-mqt="${k}" ${pr(st.mq===k)}>${tr(n)}</button>`).join(''),
+     ps=POSES.map((q,i)=>`<button data-pose="${i}" ${pr(JSON.stringify(q.p)===JSON.stringify(st.pose))}>${tr(q.n)}</button>`).join('');
    $('#mqType').innerHTML=tp;$('#cMqType').innerHTML=tp;$('#poseSeg').innerHTML=ps;$('#cPose').innerHTML=ps;
    const jn=$('#jointSel').value||'pelvis',r=(st.pose&&st.pose[jn])||[0,0,0];
    JCTRL.forEach(([k],i)=>{$('#p-'+k).value=r[i];$('#op-'+k).textContent=r[i]+'°'});
    const off=st.mq==='bust';for(const el of[$('#jointSel'),...document.querySelectorAll('#jointCtrls input,#poseSeg button')])el.disabled=off;}
   $('#af').checked=st.cm.af;$('#dc').checked=st.cm.dc;
   {const c=st.cm,pr=(on)=>`aria-pressed="${on}"`;
-   $('#q-f').value=c.f;$('#oq-f').textContent=c.f+'mm';$('#q-fd').value=c.fd;$('#oq-fd').textContent=c.fd.toFixed(2)+' m'+(c.af?' · 얼굴 AF':' · MF');
+   $('#q-f').value=c.f;$('#oq-f').textContent=c.f+'mm';$('#q-fd').value=c.fd;$('#oq-fd').textContent=c.fd.toFixed(2)+' m'+(c.af?' · '+tr('얼굴 AF'):' · MF');
    $('#oq-Ni').textContent='f/'+STOPS[c.Ni];$('#q-dc').checked=c.dc;$('#qAF').setAttribute('aria-pressed',c.af);
    $('#qF').innerHTML=[24,35,50,85,135,200].map(f=>`<button data-qf="${f}" ${pr(c.f===f)}>${f}</button>`).join('');
    $('#qN').innerHTML=[1.4,2,2.8,4,5.6,8,11].map(n=>`<button data-qn="${STOPS.indexOf(n)}" ${pr(STOPS[c.Ni]===n)}>f/${n}</button>`).join('');
    $('#qAR').innerHTML=Object.keys(AR).map(a=>`<button data-ar="${a}" ${pr(c.ar===a)}>${a}</button>`).join('');
-   $('#qGrid').innerHTML=Object.entries(GRIDS).map(([g,n])=>`<button data-grid="${g}" ${pr(c.grid===g)}>${n}</button>`).join('');}
+   $('#qGrid').innerHTML=Object.entries(GRIDS).map(([g,n])=>`<button data-grid="${g}" ${pr(c.grid===g)}${''}>${tr(n)}</button>`).join('');}
   $('#arSeg').innerHTML=Object.keys(AR).map(a=>`<button data-ar="${a}" aria-pressed="${st.cm.ar===a}">${a}</button>`).join('');
-  $('#gridSeg').innerHTML=Object.entries(GRIDS).map(([g,n])=>`<button data-grid="${g}" aria-pressed="${st.cm.grid===g}">${n}</button>`).join('');
+  $('#gridSeg').innerHTML=Object.entries(GRIDS).map(([g,n])=>`<button data-grid="${g}" aria-pressed="${st.cm.grid===g}">${tr(n)}</button>`).join('');
   drawOv();
   if(pick3==='wall')$('#w-col').value=st.bg;
   else if(LIGHTS.includes(pick3)){const p=st[pick3];$('#a-pow').value=p.pow;$('#oa-pow').textContent=p.pow+'%';$('#a-size').value=p.size;$('#oa-size').textContent=sizeLabel(p.size);$('#a-col').value=p.col;$('#a-on').checked=p.on}
 }
 function syncUI(){
-  $('#tabs').innerHTML=LIGHTS.map(k=>`<button data-k="${k}" aria-pressed="${k===sel}" class="${st[k].on?'':'dim'}">${NAME[k]}${st[k].on?'':' (꺼짐)'}</button>`).join('');
+  $('#tabs').innerHTML=LIGHTS.map(k=>`<button data-k="${k}" aria-pressed="${k===sel}" class="${st[k].on?'':'dim'}">${tr(NAME[k])}${st[k].on?'':' ('+tr('꺼짐')+')'}</button>`).join('');
   $('#on').checked=st[sel].on;$('#col').value=st[sel].col;$('#bg').value=st.bg;
   syncOutputs();drawMap();
 }
 function ratio(){
   const E=p=>intensity(p)/(p.d*p.d),k=st.key,f=st.fill,el=$('#ratio');
-  if(!k.on||!f.on||intensity(f)===0||intensity(k)===0){el.textContent='키:필 — (둘 다 켜야 계산)';return}
+  if(!k.on||!f.on||intensity(f)===0||intensity(k)===0){el.textContent=tr('키:필 — (둘 다 켜야 계산)');return}
   const r=(E(k)+E(f))/E(f);
-  el.textContent=`키:필 ${r.toFixed(1)}:1 · ${Math.log2(r).toFixed(1)}스톱`;
+  el.textContent=tr('키:필 {0}:1 · {1}스톱',r.toFixed(1),Math.log2(r).toFixed(1));
 }
 function update(saveNow=true){apply();syncOutputs();drawMap();ratio();if(saveNow)save()}
 
@@ -859,19 +875,19 @@ function glow(){
 function renderCtx(){
   const m=$('#ctx');m.hidden=!pick3;controls.enabled=!dragging()&&!camOn();
   if(!pick3){glow();return}
-  $('#ctxName').textContent=isCam3()?'카메라':isWall()?'배경지':isMq()?'마네킹':NAME[pick3]+' 조명';
+  $('#ctxName').textContent=tr(isCam3()?'카메라':isWall()?'배경지':isMq()?'마네킹':NAME[pick3]+' 조명');
   for(const b of m.querySelectorAll('[data-m]')){
     b.hidden=isCam3()&&b.dataset.m==='adj';
-    b.querySelector('.ml').textContent=isMq()?{move:'몸 방향',rot:'고개',adj:'자세'}[b.dataset.m]:{move:'이동',rot:'회전',adj:'조절'}[b.dataset.m];
+    b.querySelector('.ml').textContent=tr(isMq()?{move:'몸 방향',rot:'고개',adj:'자세'}[b.dataset.m]:{move:'이동',rot:'회전',adj:'조절'}[b.dataset.m]);
   }
   for(const b of m.querySelectorAll('[data-m]'))b.setAttribute('aria-pressed',b.dataset.m===mode);
   $('#ctxAdj').hidden=mode!=='adj'||!isLight();$('#ctxWall').hidden=mode!=='adj'||!isWall();$('#ctxPose').hidden=mode!=='adj'||!isMq();$('#aimReset').hidden=!(mode==='rot'||(isMq()&&mode==='move'));
-  $('#aimReset').textContent=isLight()||isCam3()?'피사체 쪽으로 다시 겨누기':'정면으로 되돌리기';
-  $('#ctxTip').textContent=!mode?'모드를 골라주세요':isCam3()?CAMTIP[mode]:isWall()?WALLTIP[mode]||'':isMq()?{move:'좌우로 끌면 몸 전체가 돌아가요',rot:'좌우로 끌면 얼굴이 돌아가고, 위아래로 끌면 고개를 숙이거나 들어요',adj:''}[mode]:MODE[mode].tip;$('#ctxTip').hidden=mode==='adj';
+  $('#aimReset').textContent=tr(isLight()||isCam3()?'피사체 쪽으로 다시 겨누기':'정면으로 되돌리기');
+  $('#ctxTip').textContent=tr(!mode?'모드를 골라주세요':isCam3()?CAMTIP[mode]:isWall()?WALLTIP[mode]||'':isMq()?{move:'좌우로 끌면 몸 전체가 돌아가요',rot:'좌우로 끌면 얼굴이 돌아가고, 위아래로 끌면 고개를 숙이거나 들어요',adj:''}[mode]:MODE[mode].tip);$('#ctxTip').hidden=mode==='adj';
   {const pe=poseEditOn();$('#jEdit').hidden=!pe;
-   $('#selJn').textContent=selJ?(JOINTS.find(x=>x[0]===selJ)||[])[1]:'팔다리를 탭하세요';
+   $('#selJn').textContent=tr(selJ?(JOINTS.find(x=>x[0]===selJ)||[])[1]:'팔다리를 탭하세요');
    $('#twistBtn').setAttribute('aria-pressed',twist);$('#jReset').disabled=!selJ;
-   $('#jTip').textContent=!selJ?'마디를 탭하거나 흰 점을 탭해 관절을 고르세요':twist?'좌우로 끌면 그 관절이 비틀려요':'끌면 마디 끝이 손가락을 따라가요 · 빈 곳 탭: 선택 해제';}
+   $('#jTip').textContent=tr(!selJ?'마디를 탭하거나 흰 점을 탭해 관절을 고르세요':twist?'좌우로 끌면 그 관절이 비틀려요':'끌면 마디 끝이 손가락을 따라가요 · 빈 곳 탭: 선택 해제');}
   syncOutputs();glow();placeCtx();
 }
 function openCtx(k){openQ(false);pick3=k;if(LIGHTS.includes(k)&&sel!==k){sel=k;syncUI()}renderCtx()}
@@ -1016,7 +1032,7 @@ const pickCam=o=>Object.fromEntries(CAM_KEYS.map(k=>[k,o[k]]));
 let saves=[];try{saves=JSON.parse(localStorage.getItem(SKEY)||'[]')||[]}catch(e){}
 const storeSaves=()=>{try{localStorage.setItem(SKEY,JSON.stringify(saves))}catch(e){}};
 function drawSaves(){
-  $('#saves').innerHTML=saves.length?saves.map((s,i)=>`<span class="save"><button class="load" data-i="${i}">위치 ${s.n}<small>${s.cm.f}mm</small></button><button class="del" data-del="${i}" aria-label="위치 ${s.n} 삭제">✕</button></span>`).join(''):'<span class="empty">저장된 위치가 없어요</span>';
+  $('#saves').innerHTML=saves.length?saves.map((s,i)=>`<span class="save"><button class="load" data-i="${i}">${tr('위치 {0}',s.n)}<small>${s.cm.f}mm</small></button><button class="del" data-del="${i}" aria-label="${tr('위치 {0} 삭제',s.n)}">✕</button></span>`).join(''):`<span class="empty">${tr('저장된 위치가 없어요')}</span>`;
 }
 function loadCam(c){Object.assign(st.cm,c);if(!camOn())setCamMode(true);else update()}
 $('#saveCam').onclick=()=>{saves.push({n:Math.max(0,...saves.map(s=>s.n))+1,cm:pickCam(st.cm)});storeSaves();drawSaves();$('#saves').scrollLeft=1e6};
@@ -1055,18 +1071,18 @@ function dlg(title,msg,opt={}){
 $('#dlgClose').onclick=()=>{$('#dlg').hidden=true;const im=$('#dlgImg');if(im.src.startsWith('blob:'))URL.revokeObjectURL(im.src);im.removeAttribute('src')};
 $('#dlg').addEventListener('click',e=>{if(e.target.id==='dlg')$('#dlgClose').click()});
 async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch(e){return false}}
-$('#dlgCopy').onclick=async()=>{const ok=await copyText($('#dlgIn').value);$('#dlgMsg').textContent=ok?'복사했어요.':'복사가 막혔어요. 위 칸을 길게 눌러(또는 Ctrl+C) 직접 복사해 주세요.'};
+$('#dlgCopy').onclick=async()=>{const ok=await copyText($('#dlgIn').value);$('#dlgMsg').textContent=tr(ok?'복사했어요.':'복사가 막혔어요. 위 칸을 길게 눌러(또는 Ctrl+C) 직접 복사해 주세요.')};
 $('#shareBtn').onclick=async()=>{
   const code=shareCode||await encodeState();shareCode=code;
   const base=window.top!==window?ARTIFACT_URL:location.origin+location.pathname,link=base+'#'+code;
   try{location.hash=code}catch(e){}
   const ok=await copyText(link);
-  dlg('링크 공유',(ok?'링크를 복사했어요. ':'')+'조명·카메라·벽·마네킹 설정이 모두 담겨 있어요. 받는 사람도 이 페이지를 볼 수 있어야 열려요(공유 설정 필요).',{text:link});
+  dlg(tr('링크 공유'),(ok?tr('링크를 복사했어요.')+' ':'')+tr(window.top!==window?'조명·카메라·벽·마네킹 설정이 모두 담겨 있어요. 받는 사람도 이 페이지를 볼 수 있어야 열려요(공유 설정 필요).':'조명·카메라·벽·마네킹 설정이 모두 담겨 있어요.'),{text:link});
 };
 async function applyHash(){
   const code=location.hash.slice(1);if(!/^v[01]-/.test(code))return;
   try{const sv=await decodeState(code);if(!sv)return;st=mergeState(sv);if(pick3)closeCtx();openQ(false);setCamMode(st.cm.on);syncUI();update()}
-  catch(e){dlg('링크를 열지 못했어요','링크가 잘렸거나 이 브라우저가 압축 해제를 지원하지 않아요.')}
+  catch(e){dlg(tr('링크를 열지 못했어요'),tr('링크가 잘렸거나 이 브라우저가 압축 해제를 지원하지 않아요.'))}
 }
 window.addEventListener('hashchange',applyHash);
 
@@ -1075,15 +1091,15 @@ let dlCap=null;
 if(window.claude&&claude.use)claude.use('downloads').then(d=>dlCap=d).catch(()=>{});
 let photoWait=false;
 $('#photoBtn').onclick=async()=>{
-  const btn=$('#photoBtn');if(photoWait){photoWait=false;btn.textContent='사진 저장';return}
+  const btn=$('#photoBtn');if(photoWait){photoWait=false;btn.textContent=tr('사진 저장');return}
   if(pick3)closeCtx();openQ(false);if(!camOn())setCamMode(true);
   photoWait=true;
   // 사진은 고해상도로: 프레임 긴 변이 약 2000px 되도록 잠시 해상도를 올려서 다시 다듬기
   const pr0=renderer.getPixelRatio(),fr0=frameRect(),want=Math.min(3,Math.max(pr0,2000/Math.max(fr0.w,fr0.h)));
   if(want>pr0+.01){renderer.setPixelRatio(want);resize();rk=0}
   const restore=()=>{if(renderer.getPixelRatio()!==pr0){renderer.setPixelRatio(pr0);resize()}};
-  while(photoWait&&rk<RN){btn.textContent=`다듬는 중 ${Math.round(rk/RN*100)}% (취소)`;await new Promise(r=>setTimeout(r,120))}
-  btn.textContent='사진 저장';if(!photoWait)return restore();photoWait=false;
+  while(photoWait&&rk<RN){btn.textContent=tr('다듬는 중 {0}%',Math.round(rk/RN*100))+' ('+tr('취소')+')';await new Promise(r=>setTimeout(r,120))}
+  btn.textContent=tr('사진 저장');if(!photoWait)return restore();photoWait=false;
   showTex(rtA.texture); // 완성된 화면을 다시 그리고 바로 잘라내기
   const c=renderer.domElement,fr=frameRect(),k=c.width/fr.W,out=document.createElement('canvas');
   out.width=Math.round(fr.w*k);out.height=Math.round(fr.h*k);
@@ -1093,9 +1109,13 @@ $('#photoBtn').onclick=async()=>{
   const d=new Date(),z=n=>String(n).padStart(2,'0'),name=`lighting-${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}${z(d.getSeconds())}.jpg`;
   if(dlCap){try{await dlCap.save({filename:name,data:blob});return}catch(e){if(e&&e.code==='declined')return}}
   if(window.top===window){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);return}
-  dlg('사진','여기서는 바로 저장이 안 돼요. 사진을 길게 누르거나 오른쪽 클릭해서 저장해 주세요.',{img:URL.createObjectURL(blob)});
+  dlg(tr('사진'),tr('여기서는 바로 저장이 안 돼요. 사진을 길게 누르거나 오른쪽 클릭해서 저장해 주세요.'),{img:URL.createObjectURL(blob)});
 };
 
+$('#lang').addEventListener('change',e=>{
+  lang=e.target.value;try{localStorage.setItem('litesim-lang',lang)}catch(_){}
+  applyLang();buildRows();setCamMode(st.cm.on);openQ(!$('#qcam').hidden);drawSaves();syncUI();update(false);ratio();if(pick3)renderCtx();
+});
 setCamMode(st.cm.on);syncUI();update(false);ratio();refreshShare();applyHash();
 }
 </script>
